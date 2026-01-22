@@ -34,7 +34,7 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SFXSetup.dsp b/
 diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp
 --- a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp
 +++ b/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp
-@@ -125,6 +125,179 @@ static void ShowErrorMessageSpec(const U
+@@ -131,6 +131,182 @@ static void ShowErrorMessageSpec(const UString &name)
    ShowErrorMessage(NULL, message);
  }
  
@@ -172,8 +172,11 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/
 +    // For each known DLL ensure it is loaded from the system32 directory
 +    for (size_t i = 0; i < sizeof(delayDLLs) / sizeof(delayDLLs[0]); ++i) {
 +      size_t fileLen = wcslen(delayDLLs[i]);
-+      wcsncpy(systemDirectory + systemDirLen, delayDLLs[i],
-+      MAX_PATH - systemDirLen);
++      errno_t result = wcsncpy_s(systemDirectory + systemDirLen, MAX_PATH - systemDirLen,
++                                 delayDLLs[i], MAX_PATH - systemDirLen);
++      if (result != 0) {
++        continue;
++      }
 +      if (systemDirLen + fileLen <= MAX_PATH) {
 +        systemDirectory[systemDirLen + fileLen] = L'\0';
 +      } else {
@@ -214,7 +217,7 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/
  int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /* hPrevInstance */,
      #ifdef UNDER_CE
      LPWSTR
-@@ -133,13 +306,35 @@ int APIENTRY WinMain(HINSTANCE hInstance
+@@ -139,13 +315,35 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /* hPrevInstance */,
      #endif
      /* lpCmdLine */,int /* nCmdShow */)
  {
@@ -253,7 +256,7 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/
  
    // InitCommonControls();
  
-@@ -172,6 +367,18 @@ int APIENTRY WinMain(HINSTANCE hInstance
+@@ -178,6 +376,18 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /* hPrevInstance */,
    UString dirPrefix ("." STRING_PATH_SEPARATOR);
    UString appLaunched;
    bool showProgress = true;
@@ -272,7 +275,7 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/
    if (!config.IsEmpty())
    {
      CObjectVector<CTextConfigPair> pairs;
-@@ -204,7 +411,8 @@ int APIENTRY WinMain(HINSTANCE hInstance
+@@ -210,7 +420,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /* hPrevInstance */,
    }
  
    CTempDir tempDir;
@@ -281,8 +284,8 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/
 +  if (!extractOnly && !tempDir.Create(kTempDirPrefix))
    {
      if (!assumeYes)
-       ShowErrorMessage(L"Can not create temp folder archive");
-@@ -222,7 +430,9 @@ int APIENTRY WinMain(HINSTANCE hInstance
+       ShowErrorMessage(L"Cannot create temp folder archive");
+@@ -228,7 +439,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /* hPrevInstance */,
      }
    }
  
@@ -293,7 +296,7 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/
    // tempDirPath = L"M:\\1\\"; // to test low disk space
    {
      bool isCorrupt = false;
-@@ -250,6 +460,28 @@ int APIENTRY WinMain(HINSTANCE hInstance
+@@ -256,6 +469,28 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /* hPrevInstance */,
      }
    }
  
@@ -307,7 +310,7 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/
 +      postSigningDataFilePath += L"postSigningData";
 +
 +      NFile::NIO::COutFile postSigningDataFile;
-+      postSigningDataFile.Create(postSigningDataFilePath, true);
++      postSigningDataFile.Create_ALWAYS(postSigningDataFilePath);
 +
 +      UInt32 written = 0;
 +      postSigningDataFile.Write(postSigningData, postSigningData.Len(), written);
@@ -346,7 +349,7 @@ diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/resource.rc b/o
 diff --git a/other-licenses/7zstub/src/CPP/7zip/UI/FileManager/ProgressDialog.cpp b/other-licenses/7zstub/src/CPP/7zip/UI/FileManager/ProgressDialog.cpp
 --- a/other-licenses/7zstub/src/CPP/7zip/UI/FileManager/ProgressDialog.cpp
 +++ b/other-licenses/7zstub/src/CPP/7zip/UI/FileManager/ProgressDialog.cpp
-@@ -165,7 +165,8 @@ bool CProgressDialog::OnButtonClicked(in
+@@ -170,7 +170,8 @@ bool CProgressDialog::OnButtonClicked(unsigned buttonID, HWND buttonHWND)
        bool paused = Sync.GetPaused();
        Sync.SetPaused(true);
        _inCancelMessageBox = true;

@@ -2,8 +2,8 @@ This directory contains the LZMA SDK code used in building the self-extracting
 Windows installer.
 
 The src/ directory contains an almost-unmodified copy of the 7-zip source code
-version 18.05, as downloaded from https://www.7-zip.org/a/lzma1805.7z (linked
-from https://www.7-zip.org/sdk.html) on August 30, 2018. As stated in
+version 24.09, as downloaded from https://www.7-zip.org/a/lzma2409.7z (linked
+from https://www.7-zip.org/sdk.html) on January 21, 2026. As stated in
 DOC/lzma-sdk.txt and on the web page, this code is in the public domain. A few
 modifications have been made to this copy of the source code. Those
 modifications are contained in mozilla_customizations.diff, which should be
@@ -11,7 +11,7 @@ found in the same directory as this file.
 
 The firefox/ directory contains several things:
 * SFXSetup.sln and SFXSetup.vcxproj
-  These are Visual Studio 2017 conversions of the Visual C++ 6 workspace and
+  These are Visual Studio 2026 conversions of the Visual C++ 6 workspace and
   project files from the src/CPP/7zip/Bundles/SFXSetup/ directory, with
   some changes and additions to support AArch64 and to include our resources.
 * 7zSD.arm64.manifest and 7zSD.win32.manifest
@@ -46,32 +46,36 @@ consistent way so that the changes to `mozilla_customizations.diff` are at
 least somewhat readable in code review rather than just being a complete
 rewrite of the file every time. Following these steps should accomplish this.
 
-  1) Start with a clean copy of mozilla-central.
-  2) Download a copy of the LZMA SDK. This is no longer available from the
-     original 7-zip.org download URL given above, but it is available on
-     [SourceForge](https://sourceforge.net/projects/sevenzip/files/LZMA%20SDK/lzma1805.7z/download).
-  3) The downloaded archive will contain 7 directories. 7 directories with
+  1) Start with a clean copy of firefox's main branch.
+  2) Create a new branch `git checkout -b lzma2409-orig`.
+  3) Download a copy of the LZMA SDK. If this is no longer available from the
+     original 7-zip.org download URL given above, it is available on
+     [SourceForge](https://sourceforge.net/projects/sevenzip/files/LZMA%20SDK/lzma2409.7z/download).
+  4) The downloaded archive will contain 7 directories. 7 directories with
      matching names are located in `other-licenses\7zstub\src`. Recursively copy
      the extracted directories, overwriting all files.
-  4) Make a Mercurial commit: `hg commit`. For convenience referring to this
-     commit later, you can bookmark it: `hg bookmark -if orig7z`.
-  5) Update back to central: `hg up central`.
-  6) Generate a diff and check that it matches `mozilla_customizations.diff`:
-     `hg diff --from=orig7z --to=central --unified=3 | diff - other-licenses/7zstub/mozilla_customizations.diff`
-     If there are any changes (say `hg diff`'s output format changed), it may be
-     good to re-generate `mozilla_customizations.diff` and commit it separately.
-  7) Make the new customizations.
-  8) Build the new `7zSD.ARM64.sfx` and `7zSD.Win32.sfx`.
+  5) Commit these files `git commit -a -m "original lzma2409"`
+  6) Checkout the main branch again `git checkout main`
+  7) Generate a diff and check that it matches `mozilla_customizations.diff`:
+     `git diff lzma2409-orig > tmp.diff`
+
+     You will need to remove git's extended header information by hand - see the
+     section Removing the Extended Header below for more details.
+
+     After the extended header has been removed you can check if the files are
+     the same with `cmp tmp.diff mozilla_customizations.diff`
+  8) Make the new customizations.
+  9) Build the new `7zSD.ARM64.sfx` and `7zSD.Win32.sfx`.
      This may require that the Visual Studio Installer be re-run to add the
      ARM64 toolchain, if you don't already have it. The current latest is called
-     "MSVC v143 - VS 2022 C++ ARM64/ARM64EC build tools (latest)".
+     "MSVC v145 - VS 2026 C++ ARM64/ARM64EC build tools (latest)".
      Once the necessary tools are available, open SFXSetup.sln.
      It may ask if you want to use the latest toolset versions rather than the
      ones specified by the project, which should be fine.
      Select the "ReleaseD" solution configuration and the "ARM64" platform and
      build in order to build `7zSD.ARM64.sfx`. Then select the "x86" platform
      and build again to get `7zSD.Win32.sfx`.
-  9) Move the new binaries into place and delete the other build files that we
+  10) Move the new binaries into place and delete the other build files that we
      do not need.
      ```
      mv other-licenses/7zstub/firefox/Win32/ReleaseD/7zSD.Win32.sfx other-licenses/7zstub/firefox/
@@ -79,5 +83,71 @@ rewrite of the file every time. Following these steps should accomplish this.
      rm -rf other-licenses/7zstub/firefox/ARM64/
      rm -rf other-licenses/7zstub/firefox/Win32/
      ```
-  8) Regenerate `mozilla_customizations.diff`:
-     `hg diff --from=orig7z --unified=3 -I other-licenses/7zstub/src/ > other-licenses/7zstub/mozilla_customizations.diff`
+  11) Regenerate `mozilla_customizations.diff`:
+      `git diff lzma2409-orig > mozilla_customizations.diff`
+  12) Remove any of the extended header information in the diff before committing.
+
+Updating the Version of LZMA
+----------------------------
+
+The version of LZMA can be updated in the future with the following procedure.
+
+  1) Copy the new lzma source code folder into the 7zstub folder as `src` replacing what
+     is there currently.
+  2) Commit the changes
+  2) Apply the `mozilla_customizations.diff` patch with
+     `patch -p3 < mozilla_customizations.diff`
+  3) Open `firefox/SFXSetup.sln` in Visual Studio 2026.
+  4) Look at the changes made to `src/CPP/7zip/Bundles/SFXSetup/makefile`
+     `git diff src/CPP/7zip/Bundles/SFXSetup/makefile`
+
+     This will show any preprocessor define statements that have changed and any
+     files that need added or removed from the Visual Studio project.
+
+     When changing the defines, remember to change them for both build configurations
+     `ReleaseD` and `Debug` in each architecture: `Win32` and `ARM64`.
+
+     When adding a C file to the project, you also need to turn off the precompiled
+     header support for it in the file's properties, again for both build
+     configurations in each architecture.
+  5) Build the solution and fix any compilation errors that might have arisen from
+     the Mozilla changes due to API changes between LZMA versions.
+  6) Once the solution builds correctly, error and warning free, build the
+     `ReleaseD` version for both `Win32` and `ARM64`.
+  7) Generate the new `mozilla_customizations.diff`
+     `git diff > mozilla_customizations.diff` remembering to remove the extended
+     headers from the diff file.
+  8) Commit the changes in `src`.
+  9) Commit the changes to `mozilla_customizations.diff`
+  10) Move the new binaries into place and delete the other build files that we
+     do not need.
+     ```
+     mv other-licenses/7zstub/firefox/Win32/ReleaseD/7zSD.Win32.sfx other-licenses/7zstub/firefox/
+     mv other-licenses/7zstub/firefox/ARM64/ReleaseD/7zSD.ARM64.sfx other-licenses/7zstub/firefox/
+     rm -rf other-licenses/7zstub/firefox/ARM64/
+     rm -rf other-licenses/7zstub/firefox/Win32/
+     ```
+  11) Commit the new binaries.
+
+Testing Changes
+---------------
+
+TODO: How do we test changes?
+
+Removing the Extended Header
+----------------------------
+
+Git diff adds an extended header to each file in the diff that isn't needed for
+patching, and could change over time making the resulting PR bigger than necesary.
+To avoid this we remove the extended header from the diff file before committing.
+
+The extended header is the lines between the `diff --git a/...` line and the
+next `--- a/...` line. Any line between those should be removed. In the example below
+the `index 900361e2fcf2..62208804bab0 100644` is the extended header.
+
+```
+diff --git a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SFXSetup.dsp b/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SFXSetup.dsp
+index 900361e2fcf2..62208804bab0 100644
+--- a/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SFXSetup.dsp
++++ b/other-licenses/7zstub/src/CPP/7zip/Bundles/SFXSetup/SFXSetup.dsp
+```

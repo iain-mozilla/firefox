@@ -1,17 +1,23 @@
 PROG = 7zr.exe
-MY_CONSOLE = 1
-CFLAGS = $(CFLAGS) -DPROG_VARIANT_R
 
-!IFNDEF UNDER_CE
-CFLAGS = $(CFLAGS) -DWIN_LONG_PATH -D_7ZIP_LARGE_PAGES -DSUPPORT_DEVICE_FILE
-!ENDIF
+# USE_C_AES = 1
+# USE_C_SHA = 1
+# USE_C_CRC64 = 1
+# USE_C_CRC = 1
+# NO_ASM_GNU=1
+# NO_ASM=1
+
+CFLAGS = $(CFLAGS) -DZ7_PROG_VARIANT_R
+# CONSOLE_VARIANT_FLAGS=-DZ7_PROG_VARIANT_R
 
 COMMON_OBJS = \
   $O\CommandLineParser.obj \
   $O\CRC.obj \
   $O\CrcReg.obj \
+  $O\DynLimBuf.obj \
   $O\IntToString.obj \
   $O\ListFileUtils.obj \
+  $O\LzFindPrepare.obj \
   $O\NewHandler.obj \
   $O\StdInStream.obj \
   $O\StdOutStream.obj \
@@ -37,8 +43,9 @@ WIN_OBJS = \
   $O\MemoryLock.obj \
   $O\PropVariant.obj \
   $O\PropVariantConv.obj \
-  $O\Synchronization.obj \
+  $O\Registry.obj \
   $O\System.obj \
+  $O\SystemInfo.obj \
   $O\TimeUtils.obj \
 
 7ZIP_COMMON_OBJS = \
@@ -52,6 +59,7 @@ WIN_OBJS = \
   $O\LimitedStreams.obj \
   $O\MethodId.obj \
   $O\MethodProps.obj \
+  $O\MultiOutStream.obj \
   $O\OffsetStream.obj \
   $O\OutBuffer.obj \
   $O\ProgressUtils.obj \
@@ -140,8 +148,8 @@ C_OBJS = \
   $O\LzmaEnc.obj \
   $O\MtCoder.obj \
   $O\MtDec.obj \
-  $O\Sha256.obj \
   $O\Sort.obj \
+  $O\SwapBytes.obj \
   $O\Threads.obj \
   $O\Xz.obj \
   $O\XzDec.obj \
@@ -153,6 +161,8 @@ C_OBJS = \
 !include "../../Aes.mak"
 !include "../../Crc.mak"
 !include "../../Crc64.mak"
+!include "../../LzFindOpt.mak"
 !include "../../LzmaDec.mak"
+!include "../../Sha256.mak"
 
 !include "../../7zip.mak"
