@@ -61,6 +61,7 @@
 #ifdef XP_MACOSX
 #  include "UpdateSettingsUtil.h"
 #  include "updaterfileutils_osx.h"
+#  include "umaskcontext_osx.h"
 #endif  // XP_MACOSX
 
 #include "mozilla/CmdLineAndEnvUtils.h"
@@ -216,29 +217,6 @@ static UpdaterInvocation getUpdaterInvocationFromArg(const NS_tchar* argument) {
 }
 
 //-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-
-#ifdef XP_MACOSX
-
-// Just a simple class that sets a umask value in its constructor and resets
-// it in its destructor.
-class UmaskContext {
- public:
-  explicit UmaskContext(mode_t umaskToSet);
-  ~UmaskContext();
-
- private:
-  mode_t mPreviousUmask;
-};
-
-UmaskContext::UmaskContext(mode_t umaskToSet) {
-  mPreviousUmask = umask(umaskToSet);
-}
-
-UmaskContext::~UmaskContext() { umask(mPreviousUmask); }
-
-#endif
 
 static NS_tchar gPatchDirPath[MAXPATHLEN];
 static NS_tchar gInstallDirPath[MAXPATHLEN];
