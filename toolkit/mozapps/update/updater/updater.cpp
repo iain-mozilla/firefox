@@ -73,6 +73,7 @@
 #  include <climits>
 #endif  // XP_WIN
 
+#include "autofile.h"
 #include "thread.h"
 // Amount of the progress bar to use in each of the 3 update stages,
 // should total 100.0.
@@ -215,38 +216,6 @@ static UpdaterInvocation getUpdaterInvocationFromArg(const NS_tchar* argument) {
 }
 
 //-----------------------------------------------------------------------------
-
-// A simple stack based container for a FILE struct that closes the
-// file descriptor from its destructor.
-class AutoFile {
- public:
-  explicit AutoFile(FILE* file = nullptr) : mFile(file) {}
-
-  ~AutoFile() { close(); }
-
-  AutoFile& operator=(FILE* file) {
-    close();
-    mFile = file;
-    return *this;
-  }
-
-  operator FILE*() { return mFile; }
-
-  FILE* get() { return mFile; }
-
- private:
-  FILE* mFile;
-
-  void close() {
-    if (mFile != nullptr) {
-      int rv = fclose(mFile);
-      if (rv != 0) {
-        LOG(("File close did not execute successfully"));
-      }
-      mFile = nullptr;
-    }
-  }
-};
 
 //-----------------------------------------------------------------------------
 
