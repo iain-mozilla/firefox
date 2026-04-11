@@ -73,6 +73,7 @@
 #  include <climits>
 #endif  // XP_WIN
 
+#include "thread.h"
 // Amount of the progress bar to use in each of the 3 update stages,
 // should total 100.0.
 #define PROGRESS_PREPARE_SIZE 20.0f
@@ -269,66 +270,6 @@ UmaskContext::UmaskContext(mode_t umaskToSet) {
 UmaskContext::~UmaskContext() { umask(mPreviousUmask); }
 
 #endif
-
-//-----------------------------------------------------------------------------
-
-typedef void (*ThreadFunc)(void* param);
-
-#ifdef XP_WIN
-#  include <process.h>
-
-class Thread {
- public:
-  int Run(ThreadFunc func, void* param) {
-    mThreadFunc = func;
-    mThreadParam = param;
-
-    unsigned int threadID;
-
-    mThread =
-        (HANDLE)_beginthreadex(nullptr, 0, ThreadMain, this, 0, &threadID);
-
-    return mThread ? 0 : -1;
-  }
-  int Join() {
-    WaitForSingleObject(mThread, INFINITE);
-    CloseHandle(mThread);
-    return 0;
-  }
-
- private:
-  static unsigned __stdcall ThreadMain(void* p) {
-    Thread* self = (Thread*)p;
-    self->mThreadFunc(self->mThreadParam);
-    return 0;
-  }
-  HANDLE mThread;
-  ThreadFunc mThreadFunc;
-  void* mThreadParam;
-};
-
-#elif defined(XP_UNIX)
-#  include <pthread.h>
-
-class Thread {
- public:
-  int Run(ThreadFunc func, void* param) {
-    return pthread_create(&thr, nullptr, (void* (*)(void*))func, param);
-  }
-  int Join() {
-    void* result;
-    return pthread_join(thr, &result);
-  }
-
- private:
-  pthread_t thr;
-};
-
-#else
-#  error "Unsupported platform"
-#endif
-
-//-----------------------------------------------------------------------------
 
 static NS_tchar gPatchDirPath[MAXPATHLEN];
 static NS_tchar gInstallDirPath[MAXPATHLEN];

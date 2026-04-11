@@ -37,6 +37,7 @@ if CONFIG["OS_ARCH"] == "WINNT":
         "/toolkit/xre/WinTokenUtils.cpp",
         "loaddlls.cpp",
         "progressui_win.cpp",
+        "thread_win.cpp",
     ]
     RCINCLUDE = "%supdater.rc" % updater_rel_path
     DEFINES["UNICODE"] = True
@@ -91,6 +92,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     have_progressui = 1
     srcs += [
         "progressui_gtk.cpp",
+        "thread_unix.cpp",
     ]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
@@ -98,6 +100,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
     srcs += [
         "launchchild_osx.mm",
         "progressui_osx.mm",
+        "thread_unix.cpp",
     ]
     OS_LIBS += [
         "-framework Cocoa",
