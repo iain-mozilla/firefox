@@ -30,6 +30,7 @@
  *  method   = "remove" | "rmdir"
  */
 
+#include "actions/action.h"
 #if defined(MOZ_BSPATCH)
 #  include "bspatch.h"
 #  include "crctable.h"
@@ -76,6 +77,9 @@
 
 #include "autofile.h"
 #include "thread.h"
+
+#include "actions/removefile.h"
+
 // Amount of the progress bar to use in each of the 3 update stages,
 // should total 100.0.
 #define PROGRESS_PREPARE_SIZE 20.0f
@@ -217,6 +221,9 @@ static UpdaterInvocation getUpdaterInvocationFromArg(const NS_tchar* argument) {
 }
 
 //-----------------------------------------------------------------------------
+
+// Context to pass into the actions
+static ActionContext* gActionContext = nullptr;
 
 static NS_tchar gPatchDirPath[MAXPATHLEN];
 static NS_tchar gInstallDirPath[MAXPATHLEN];
@@ -1101,156 +1108,7 @@ static void backup_finish(const NS_tchar* path, const NS_tchar* relPath,
 
 static int DoUpdate();
 
-class Action {
- public:
-  Action() : mProgressCost(1), mNext(nullptr) {}
-  virtual ~Action() = default;
 
-  virtual int Parse(NS_tchar* line) = 0;
-
-  // Do any preprocessing to ensure that the action can be performed.  Execute
-  // will be called if this Action and all others return OK from this method.
-  virtual int Prepare() = 0;
-
-  // Perform the operation.  Return OK to indicate success.  After all actions
-  // have been executed, Finish will be called.  A requirement of Execute is
-  // that its operation be reversable from Finish.
-  virtual int Execute() = 0;
-
-  // Finish is called after execution of all actions.  If status is OK, then
-  // all actions were successfully executed.  Otherwise, some action failed.
-  virtual void Finish(int status) = 0;
-
-  int mProgressCost;
-
- private:
-  Action* mNext;
-
-  friend class ActionList;
-};
-
-class RemoveFile : public Action {
- public:
-  RemoveFile() : mSkip(0) {}
-
-  int Parse(NS_tchar* line) override;
-  int Prepare() override;
-  int Execute() override;
-  void Finish(int status) override;
-
- private:
-  mozilla::UniquePtr<NS_tchar[]> mFile;
-  mozilla::UniquePtr<NS_tchar[]> mRelPath;
-  int mSkip;
-};
-
-int RemoveFile::Parse(NS_tchar* line) {
-  // format "<deadfile>"
-
-  NS_tchar* validPath = get_valid_path(&line);
-  if (!validPath) {
-    return PARSE_ERROR;
-  }
-
-  mRelPath = mozilla::MakeUnique<NS_tchar[]>(MAXPATHLEN);
-  NS_tstrcpy(mRelPath.get(), validPath);
-
-  mFile.reset(get_full_path(validPath));
-  if (!mFile) {
-    return PARSE_ERROR;
-  }
-
-  return OK;
-}
-
-int RemoveFile::Prepare() {
-  // Skip the file if it already doesn't exist.
-  int rv = NS_taccess(mFile.get(), F_OK);
-  if (rv) {
-    mSkip = 1;
-    mProgressCost = 0;
-    return OK;
-  }
-
-  LOG(("PREPARE REMOVEFILE " LOG_S, mRelPath.get()));
-
-  // Make sure that we're actually a file...
-  struct NS_tstat_t fileInfo;
-  rv = NS_tstat(mFile.get(), &fileInfo);
-  if (rv) {
-    LOG(("failed to read file status info: " LOG_S ", err: %d", mFile.get(),
-         errno));
-    return READ_ERROR;
-  }
-
-  if (!S_ISREG(fileInfo.st_mode)) {
-    LOG(("path present, but not a file: " LOG_S, mFile.get()));
-    return DELETE_ERROR_EXPECTED_FILE;
-  }
-
-  NS_tchar* slash = (NS_tchar*)NS_tstrrchr(mFile.get(), NS_T('/'));
-  if (slash) {
-    *slash = NS_T('\0');
-    rv = NS_taccess(mFile.get(), W_OK);
-    *slash = NS_T('/');
-  } else {
-    rv = NS_taccess(NS_T("."), W_OK);
-  }
-
-  if (rv) {
-    LOG(("access failed: %d", errno));
-    return WRITE_ERROR_FILE_ACCESS_DENIED;
-  }
-
-  return OK;
-}
-
-int RemoveFile::Execute() {
-  if (mSkip) {
-    return OK;
-  }
-
-  LOG(("EXECUTE REMOVEFILE " LOG_S, mRelPath.get()));
-
-  // The file is checked for existence here and in Prepare since it might have
-  // been removed by a separate instruction: bug 311099.
-  int rv = NS_taccess(mFile.get(), F_OK);
-  if (rv) {
-    LOG(("file cannot be removed because it does not exist; skipping"));
-    mSkip = 1;
-    return OK;
-  }
-
-  if (sStagedUpdate) {
-    // Staged updates don't need backup files so just remove it.
-    rv = ensure_remove(mFile.get());
-    if (rv) {
-      return rv;
-    }
-  } else {
-    // Rename the old file. It will be removed in Finish.
-    rv = backup_create(mFile.get());
-    if (rv) {
-      LOG(("backup_create failed: %d", rv));
-      return rv;
-    }
-  }
-
-  return OK;
-}
-
-void RemoveFile::Finish(int status) {
-  if (mSkip) {
-    return;
-  }
-
-  LOG(("FINISH REMOVEFILE " LOG_S, mRelPath.get()));
-
-  // Staged updates don't create backup files.
-  if (!sStagedUpdate) {
-    backup_finish(mFile.get(), mRelPath.get(), status);
-  }
-}
 
 class RemoveDir : public Action {
  public:
@@ -3418,6 +3276,9 @@ int NS_main(int argc, NS_tchar** argv) {
     *slash = NS_T('\0');
   }
 
+  // Options are set, so create the ActionContext
+  gActionContext = new ActionContext(sStagedUpdate, gWorkingDirPath, gInstallDirPath);
+
 #ifdef XP_WIN
   bool useService = false;
   bool testOnlyFallbackKeyExists = false;
@@ -4712,7 +4573,7 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
           return PARSE_ERROR;
         }
 
-        mozilla::UniquePtr<Action> action(new RemoveFile());
+        mozilla::UniquePtr<Action> action(new RemoveFile(gActionContext));
         rv = action->Parse(quotedpath);
         if (rv) {
           LOG(("add_dir_entries Parse error on recurse: " LOG_S ", err: %d",
@@ -4796,7 +4657,7 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
             rv = UPDATER_QUOTED_PATH_MEM_ERROR;
             break;
           }
-          action.reset(new RemoveFile());
+          action.reset(new RemoveFile(gActionContext));
           rv = action->Parse(quotedpath);
           free(quotedpath);
           if (!rv) {
@@ -4913,7 +4774,7 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
         return PARSE_ERROR;
       }
 
-      mozilla::UniquePtr<Action> action(new RemoveFile());
+      mozilla::UniquePtr<Action> action(new RemoveFile(gActionContext));
       rv = action->Parse(quotedpath);
       if (rv) {
         LOG(("add_dir_entries Parse error on recurse: " LOG_S ", err: %d",
@@ -5054,7 +4915,7 @@ int AddPreCompleteActions(ActionList* list) {
 
     Action* action = nullptr;
     if (NS_tstrcmp(token, NS_T("remove")) == 0) {  // rm file
-      action = new RemoveFile();
+      action = new RemoveFile(gActionContext);
     } else if (NS_tstrcmp(token, NS_T("remove-cc")) ==
                0) {  // no longer supported
       continue;
@@ -5147,7 +5008,7 @@ int DoUpdate() {
 
     Action* action = nullptr;
     if (NS_tstrcmp(token, NS_T("remove")) == 0) {  // rm file
-      action = new RemoveFile();
+      action = new RemoveFile(gActionContext);
     } else if (NS_tstrcmp(token, NS_T("rmdir")) == 0) {  // rmdir if empty
       action = new RemoveDir();
     } else if (NS_tstrcmp(token, NS_T("rmrfdir")) == 0) {  // rmdir recursive

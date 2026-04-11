@@ -66,6 +66,7 @@ if CONFIG["OS_ARCH"] == "WINNT":
         ]
 
 USE_LIBS += [
+    "actions",
     "mar",
     "updatecommon",
     "xz-embedded",

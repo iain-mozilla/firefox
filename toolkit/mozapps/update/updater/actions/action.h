@@ -1,0 +1,50 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 et cindent: */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#ifndef ACTION_H
+#define ACTION_H
+
+// For NS_tchar
+#include "readstrings.h"
+
+struct ActionContext {
+  ActionContext(bool stagedUpdate, NS_tchar* workingDirPath, NS_tchar* installDirPath)
+    : mStagedUpdate(stagedUpdate), mWorkingDirPath(workingDirPath), mInstallDirPath(installDirPath) {}
+
+  bool mStagedUpdate;
+  const NS_tchar* mWorkingDirPath;
+  const NS_tchar* mInstallDirPath;
+};
+
+class Action {
+ public:
+  Action() : mProgressCost(1), mNext(nullptr) {}
+  virtual ~Action() = default;
+
+  virtual int Parse(NS_tchar* line) = 0;
+
+  // Do any preprocessing to ensure that the action can be performed.  Execute
+  // will be called if this Action and all others return OK from this method.
+  virtual int Prepare() = 0;
+
+  // Perform the operation.  Return OK to indicate success.  After all actions
+  // have been executed, Finish will be called.  A requirement of Execute is
+  // that its operation be reversable from Finish.
+  virtual int Execute() = 0;
+
+  // Finish is called after execution of all actions.  If status is OK, then
+  // all actions were successfully executed.  Otherwise, some action failed.
+  virtual void Finish(int status) = 0;
+
+  int mProgressCost;
+
+ private:
+  Action* mNext;
+
+  friend class ActionList;
+};
+
+#endif

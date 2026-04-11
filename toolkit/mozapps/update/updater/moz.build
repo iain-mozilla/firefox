@@ -9,7 +9,10 @@ else:
 
 updater_rel_path = ""
 include("updater-common.build")
-DIRS += ["updater-dep"]
+DIRS += [
+        "actions",
+        "updater-dep"
+    ]
 TEST_DIRS += ["updater-xpcshell"]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":

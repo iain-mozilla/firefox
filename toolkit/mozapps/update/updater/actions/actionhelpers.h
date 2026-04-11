@@ -1,0 +1,25 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 et cindent: */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#ifndef ACTIONHELPERS_H
+#define ACTIONHELPERS_H
+
+#include "updatecommon.h"
+#include "action.h"
+
+NS_tchar* get_valid_path(NS_tchar** line, bool isdir = false);
+NS_tchar* get_full_path(const NS_tchar* relpath, ActionContext* context);
+void ensure_write_permissions(const NS_tchar* path);
+int ensure_remove(const NS_tchar* path);
+
+// FIXME: Different file?
+int backup_create(const NS_tchar* path);
+int backup_restore(const NS_tchar* path, const NS_tchar* relPath);
+int backup_discard(const NS_tchar* path, const NS_tchar* relPath);
+void backup_finish(const NS_tchar* path,
+                   const NS_tchar* relPath,
+                   int status);
+#endif
