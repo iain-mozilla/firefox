@@ -78,6 +78,7 @@
 #include "autofile.h"
 #include "thread.h"
 
+#include "actions/removedir.h"
 #include "actions/removefile.h"
 
 // Amount of the progress bar to use in each of the 3 update stages,
@@ -1107,117 +1108,6 @@ static void backup_finish(const NS_tchar* path, const NS_tchar* relPath,
 //-----------------------------------------------------------------------------
 
 static int DoUpdate();
-
-
-
-class RemoveDir : public Action {
- public:
-  RemoveDir() : mSkip(0) {}
-
-  int Parse(NS_tchar* line) override;
-  int Prepare() override;  // check that the source dir exists
-  int Execute() override;
-  void Finish(int status) override;
-
- private:
-  mozilla::UniquePtr<NS_tchar[]> mDir;
-  mozilla::UniquePtr<NS_tchar[]> mRelPath;
-  int mSkip;
-};
-
-int RemoveDir::Parse(NS_tchar* line) {
-  // format "<deaddir>/"
-
-  NS_tchar* validPath = get_valid_path(&line, true);
-  if (!validPath) {
-    return PARSE_ERROR;
-  }
-
-  mRelPath = mozilla::MakeUnique<NS_tchar[]>(MAXPATHLEN);
-  NS_tstrcpy(mRelPath.get(), validPath);
-
-  mDir.reset(get_full_path(validPath));
-  if (!mDir) {
-    return PARSE_ERROR;
-  }
-
-  return OK;
-}
-
-int RemoveDir::Prepare() {
-  // We expect the directory to exist if we are to remove it.
-  int rv = NS_taccess(mDir.get(), F_OK);
-  if (rv) {
-    mSkip = 1;
-    mProgressCost = 0;
-    return OK;
-  }
-
-  LOG(("PREPARE REMOVEDIR " LOG_S "/", mRelPath.get()));
-
-  // Make sure that we're actually a dir.
-  struct NS_tstat_t dirInfo;
-  rv = NS_tstat(mDir.get(), &dirInfo);
-  if (rv) {
-    LOG(("failed to read directory status info: " LOG_S ", err: %d",
-         mRelPath.get(), errno));
-    return READ_ERROR;
-  }
-
-  if (!S_ISDIR(dirInfo.st_mode)) {
-    LOG(("path present, but not a directory: " LOG_S, mRelPath.get()));
-    return DELETE_ERROR_EXPECTED_DIR;
-  }
-
-  rv = NS_taccess(mDir.get(), W_OK);
-  if (rv) {
-    LOG(("access failed: %d, %d", rv, errno));
-    return WRITE_ERROR_DIR_ACCESS_DENIED;
-  }
-
-  return OK;
-}
-
-int RemoveDir::Execute() {
-  if (mSkip) {
-    return OK;
-  }
-
-  LOG(("EXECUTE REMOVEDIR " LOG_S "/", mRelPath.get()));
-
-  // The directory is checked for existence at every step since it might have
-  // been removed by a separate instruction: bug 311099.
-  int rv = NS_taccess(mDir.get(), F_OK);
-  if (rv) {
-    LOG(("directory no longer exists; skipping"));
-    mSkip = 1;
-  }
-
-  return OK;
-}
-
-void RemoveDir::Finish(int status) {
-  if (mSkip || status != OK) {
-    return;
-  }
-
-  LOG(("FINISH REMOVEDIR " LOG_S "/", mRelPath.get()));
-
-  // The directory is checked for existence at every step since it might have
-  // been removed by a separate instruction: bug 311099.
-  int rv = NS_taccess(mDir.get(), F_OK);
-  if (rv) {
-    LOG(("directory no longer exists; skipping"));
-    return;
-  }
-
-  if (status == OK) {
-    if (NS_trmdir(mDir.get())) {
-      LOG(("non-fatal error removing directory: " LOG_S "/, rv: %d, err: %d",
-           mRelPath.get(), rv, errno));
-    }
-  }
-}
 
 class AddFile : public Action {
  public:
@@ -4596,7 +4486,7 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
         return PARSE_ERROR;
       }
 
-      mozilla::UniquePtr<Action> action(new RemoveDir());
+      mozilla::UniquePtr<Action> action(new RemoveDir(gActionContext));
       rv = action->Parse(quotedpath);
       if (rv) {
         LOG(("add_dir_entries Parse error on close: " LOG_S ", err: %d",
@@ -4676,7 +4566,7 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
             break;
           }
 
-          action.reset(new RemoveDir());
+          action.reset(new RemoveDir(gActionContext));
           rv = action->Parse(quotedpath);
           free(quotedpath);
           if (!rv) {
@@ -4796,7 +4686,7 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
     return PARSE_ERROR;
   }
 
-  mozilla::UniquePtr<Action> action(new RemoveDir());
+  mozilla::UniquePtr<Action> action(new RemoveDir(gActionContext));
   rv = action->Parse(quotedpath);
   if (rv) {
     LOG(("add_dir_entries Parse error on close: " LOG_S ", err: %d", quotedpath,
@@ -4920,7 +4810,7 @@ int AddPreCompleteActions(ActionList* list) {
                0) {  // no longer supported
       continue;
     } else if (NS_tstrcmp(token, NS_T("rmdir")) == 0) {  // rmdir if  empty
-      action = new RemoveDir();
+      action = new RemoveDir(gActionContext);
     } else {
       LOG(("AddPreCompleteActions: unknown token: " LOG_S, token));
       free(buf);
@@ -5010,7 +4900,7 @@ int DoUpdate() {
     if (NS_tstrcmp(token, NS_T("remove")) == 0) {  // rm file
       action = new RemoveFile(gActionContext);
     } else if (NS_tstrcmp(token, NS_T("rmdir")) == 0) {  // rmdir if empty
-      action = new RemoveDir();
+      action = new RemoveDir(gActionContext);
     } else if (NS_tstrcmp(token, NS_T("rmrfdir")) == 0) {  // rmdir recursive
       const NS_tchar* reldirpath = mstrtok(kQuote, &line);
       if (!reldirpath) {
