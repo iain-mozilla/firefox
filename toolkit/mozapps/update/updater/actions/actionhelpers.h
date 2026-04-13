@@ -10,10 +10,15 @@
 #include "updatecommon.h"
 #include "action.h"
 
+const NS_tchar kQuote[] = NS_T("\"");
+
+NS_tchar* mstrtok(const NS_tchar* delims, NS_tchar** str);
+
 NS_tchar* get_valid_path(NS_tchar** line, bool isdir = false);
 NS_tchar* get_full_path(const NS_tchar* relpath, ActionContext* context);
 void ensure_write_permissions(const NS_tchar* path);
 int ensure_remove(const NS_tchar* path);
+int ensure_parent_dir(const NS_tchar* path);
 
 // FIXME: Different file?
 int backup_create(const NS_tchar* path);

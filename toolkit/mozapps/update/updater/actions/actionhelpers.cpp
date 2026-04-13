@@ -10,10 +10,8 @@
 #include "action.h"
 #include "updatererrors.h"
 
-static const NS_tchar kQuote[] = NS_T("\"");
-
 // FIXME: move to common
-static NS_tchar* mstrtok(const NS_tchar* delims, NS_tchar** str) {
+NS_tchar* mstrtok(const NS_tchar* delims, NS_tchar** str) {
   if (!*str || !**str) {
     *str = nullptr;
     return nullptr;
@@ -155,7 +153,7 @@ int ensure_remove(const NS_tchar* path) {
 }
 
 // Ensure that the directory containing this file exists.
-static int ensure_parent_dir(const NS_tchar* path) {
+int ensure_parent_dir(const NS_tchar* path) {
   int rv = OK;
 
   NS_tchar* slash = (NS_tchar*)NS_tstrrchr(path, NS_T('/'));
