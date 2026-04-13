@@ -6,12 +6,18 @@
 
 EXPORTS += [
     "action.h",
+    "addfile.h",
+    "addiffile.h",
+    "addifnotfile.h",
     "removedir.h",
     "removefile.h",
 ]
 
 SOURCES += [
     "actionhelpers.cpp",
+    "addfile.cpp",
+    "addiffile.cpp",
+    "addifnotfile.cpp",
     "removedir.cpp",
     "removefile.cpp",
 ]

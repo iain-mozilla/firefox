@@ -79,6 +79,9 @@
 #include "thread.h"
 
 #include "actions/actionhelpers.h"
+#include "actions/addfile.h"
+#include "actions/addiffile.h"
+#include "actions/addifnotfile.h"
 #include "actions/removedir.h"
 #include "actions/removefile.h"
 
@@ -1412,114 +1415,6 @@ void PatchFile::Finish(int status) {
   }
 }
 
-class AddIfFile : public AddFile {
- public:
-  int Parse(NS_tchar* line) override;
-  int Prepare() override;
-  int Execute() override;
-  void Finish(int status) override;
-
- protected:
-  mozilla::UniquePtr<NS_tchar[]> mTestFile;
-};
-
-int AddIfFile::Parse(NS_tchar* line) {
-  // format "<testfile>" "<newfile>"
-
-  mTestFile.reset(get_full_path(get_valid_path(&line)));
-  if (!mTestFile) {
-    return PARSE_ERROR;
-  }
-
-  // consume whitespace between args
-  NS_tchar* q = mstrtok(kQuote, &line);
-  if (!q) {
-    return PARSE_ERROR;
-  }
-
-  return AddFile::Parse(line);
-}
-
-int AddIfFile::Prepare() {
-  // If the test file does not exist, then skip this action.
-  if (NS_taccess(mTestFile.get(), F_OK)) {
-    mTestFile = nullptr;
-    return OK;
-  }
-
-  return AddFile::Prepare();
-}
-
-int AddIfFile::Execute() {
-  if (!mTestFile) {
-    return OK;
-  }
-
-  return AddFile::Execute();
-}
-
-void AddIfFile::Finish(int status) {
-  if (!mTestFile) {
-    return;
-  }
-
-  AddFile::Finish(status);
-}
-
-class AddIfNotFile : public AddFile {
- public:
-  int Parse(NS_tchar* line) override;
-  int Prepare() override;
-  int Execute() override;
-  void Finish(int status) override;
-
- protected:
-  mozilla::UniquePtr<NS_tchar[]> mTestFile;
-};
-
-int AddIfNotFile::Parse(NS_tchar* line) {
-  // format "<testfile>" "<newfile>"
-
-  mTestFile.reset(get_full_path(get_valid_path(&line)));
-  if (!mTestFile) {
-    return PARSE_ERROR;
-  }
-
-  // consume whitespace between args
-  NS_tchar* q = mstrtok(kQuote, &line);
-  if (!q) {
-    return PARSE_ERROR;
-  }
-
-  return AddFile::Parse(line);
-}
-
-int AddIfNotFile::Prepare() {
-  // If the test file exists, then skip this action.
-  if (!NS_taccess(mTestFile.get(), F_OK)) {
-    mTestFile = nullptr;
-    return OK;
-  }
-
-  return AddFile::Prepare();
-}
-
-int AddIfNotFile::Execute() {
-  if (!mTestFile) {
-    return OK;
-  }
-
-  return AddFile::Execute();
-}
-
-void AddIfNotFile::Finish(int status) {
-  if (!mTestFile) {
-    return;
-  }
-
-  AddFile::Finish(status);
-}
-
 class PatchIfFile : public PatchFile {
  public:
   int Parse(NS_tchar* line) override;
@@ -2833,7 +2728,8 @@ int NS_main(int argc, NS_tchar** argv) {
   }
 
   // Options are set, so create the ActionContext
-  gActionContext = new ActionContext(sStagedUpdate, gWorkingDirPath, gInstallDirPath);
+  gActionContext = new ActionContext(sStagedUpdate, gWorkingDirPath,
+                                     gInstallDirPath, &gArchiveReader);
 
 #ifdef XP_WIN
   bool useService = false;
@@ -4587,14 +4483,14 @@ int DoUpdate() {
 
       continue;
     } else if (NS_tstrcmp(token, NS_T("add")) == 0) {
-      action = new AddFile();
+      action = new AddFile(gActionContext);
     } else if (NS_tstrcmp(token, NS_T("patch")) == 0) {
       action = new PatchFile();
     } else if (NS_tstrcmp(token, NS_T("add-if")) == 0) {  // Add if exists
-      action = new AddIfFile();
+      action = new AddIfFile(gActionContext);
     } else if (NS_tstrcmp(token, NS_T("add-if-not")) ==
                0) {  // Add if not exists
-      action = new AddIfNotFile();
+      action = new AddIfNotFile(gActionContext);
     } else if (NS_tstrcmp(token, NS_T("patch-if")) == 0) {  // Patch if exists
       action = new PatchIfFile();
     } else {
