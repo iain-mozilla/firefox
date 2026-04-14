@@ -9,6 +9,8 @@ EXPORTS += [
     "addfile.h",
     "addiffile.h",
     "addifnotfile.h",
+    "patchfile.h",
+    "patchiffile.h",
     "removedir.h",
     "removefile.h",
 ]
@@ -18,8 +20,12 @@ SOURCES += [
     "addfile.cpp",
     "addiffile.cpp",
     "addifnotfile.cpp",
+    "bspatchfiledecoder.cpp",
+    "patchfile.cpp",
+    "patchiffile.cpp",
     "removedir.cpp",
     "removefile.cpp",
+    "zucchinipatchfiledecoder.cpp",
 ]
 
 Library("actions")
