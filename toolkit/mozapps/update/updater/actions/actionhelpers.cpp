@@ -10,7 +10,8 @@
 #include "action.h"
 #include "updatererrors.h"
 
-// FIXME: move to common
+size_t mmin(size_t a, size_t b) { return (a > b) ? b : a; }
+
 NS_tchar* mstrtok(const NS_tchar* delims, NS_tchar** str) {
   if (!*str || !**str) {
     *str = nullptr;
@@ -225,7 +226,54 @@ static int rename_file(const NS_tchar* spath, const NS_tchar* dpath,
   return OK;
 }
 
-// FIXME: Should this go into a separate file?
+static bool is_read_only(const NS_tchar* flags) {
+  size_t length = NS_tstrlen(flags);
+  if (length == 0) {
+    return false;
+  }
+
+  // Make sure the string begins with "r"
+  if (flags[0] != NS_T('r')) {
+    return false;
+  }
+
+  // Look for "r+" or "r+b"
+  if (length > 1 && flags[1] == NS_T('+')) {
+    return false;
+  }
+
+  // Look for "rb+"
+  if (NS_tstrcmp(flags, NS_T("rb+")) == 0) {
+    return false;
+  }
+
+  return true;
+}
+
+FILE* ensure_open(const NS_tchar* path, const NS_tchar* flags,
+                  unsigned int options) {
+  ensure_write_permissions(path);
+  FILE* f = NS_tfopen(path, flags);
+  if (is_read_only(flags)) {
+    // Don't attempt to modify the file permissions if the file is being opened
+    // in read-only mode.
+    return f;
+  }
+  if (NS_tchmod(path, options) != 0) {
+    if (f != nullptr) {
+      fclose(f);
+    }
+    return nullptr;
+  }
+  struct NS_tstat_t ss;
+  if (NS_tstat(path, &ss) != 0 || ss.st_mode != options) {
+    if (f != nullptr) {
+      fclose(f);
+    }
+    return nullptr;
+  }
+  return f;
+}
 
 // Create a backup of the specified file by renaming it.
 int backup_create(const NS_tchar* path) {
