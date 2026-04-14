@@ -283,6 +283,13 @@ static bool gCopyOutputFiles = false;
 static const NS_tchar kWhitespace[] = NS_T(" \t");
 static const NS_tchar kNL[] = NS_T("\r\n");
 
+#ifdef XP_MACOSX
+static const NS_tchar kManifestFilePath[] =
+    NS_T("Contents/Resources/precomplete");
+#else
+static const NS_tchar kManifestFilePath[] = NS_T("precomplete");
+#endif
+
 #if defined(TEST_UPDATER) || defined(XP_WIN) || defined(XP_MACOSX)
 static bool EnvHasValue(const char* name) {
   const char* val = getenv(name);
@@ -365,32 +372,6 @@ static void output_finish() {
     }
   }
 #endif
-}
-
-/**
- * Coverts a relative update path to a full path.
- *
- * @param  relpath
- *         The relative path to convert to a full path.
- * @return valid filesystem full path or nullptr if memory allocation fails.
- */
-static NS_tchar* get_full_path(const NS_tchar* relpath) {
-  NS_tchar* destpath = sStagedUpdate ? gWorkingDirPath : gInstallDirPath;
-  size_t lendestpath = NS_tstrlen(destpath);
-  size_t lenrelpath = NS_tstrlen(relpath);
-  NS_tchar* s = new NS_tchar[lendestpath + lenrelpath + 2];
-
-  NS_tchar* c = s;
-
-  NS_tstrcpy(c, destpath);
-  c += lendestpath;
-  NS_tstrcat(c, NS_T("/"));
-  c++;
-
-  NS_tstrcat(c, relpath);
-  c += lenrelpath;
-  *c = NS_T('\0');
-  return s;
 }
 
 /**
@@ -3339,7 +3320,8 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
 
   NS_tsnprintf(searchspec, sizeof(searchspec) / sizeof(searchspec[0]),
                NS_T("%s*"), dirpath);
-  mozilla::UniquePtr<const NS_tchar> pszSpec(get_full_path(searchspec));
+  mozilla::UniquePtr<const NS_tchar> pszSpec(
+      get_full_path(searchspec, gActionContext));
 
   hFindFile = FindFirstFileW(pszSpec.get(), &finddata);
   if (hFindFile != INVALID_HANDLE_VALUE) {
@@ -3413,7 +3395,8 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
     int rv = OK;
     FTS* ftsdir;
     FTSENT* ftsdirEntry;
-    mozilla::UniquePtr<NS_tchar[]> searchpath(get_full_path(dirpath));
+    mozilla::UniquePtr<NS_tchar[]> searchpath(
+        get_full_path(dirpath, gActionContext));
 
     // Remove the trailing slash so the paths don't contain double slashes. The
     // existence of the slash has already been checked in DoUpdate.
@@ -3531,7 +3514,8 @@ int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
     char chars[NAME_MAX];
   } ent_buf;
   struct dirent* ent;
-  mozilla::UniquePtr<NS_tchar[]> searchpath(get_full_path(dirpath));
+  mozilla::UniquePtr<NS_tchar[]> searchpath(
+      get_full_path(dirpath, gActionContext));
 
   DIR* dir = opendir(searchpath.get());
   if (!dir) {
@@ -3676,13 +3660,8 @@ static NS_tchar* GetManifestContents(const NS_tchar* manifest) {
 }
 
 int AddPreCompleteActions(ActionList* list) {
-#ifdef XP_MACOSX
   mozilla::UniquePtr<NS_tchar[]> manifestPath(
-      get_full_path(NS_T("Contents/Resources/precomplete")));
-#else
-    mozilla::UniquePtr<NS_tchar[]> manifestPath(
-        get_full_path(NS_T("precomplete")));
-#endif
+      get_full_path(kManifestFilePath, gActionContext));
 
   NS_tchar* buf = GetManifestContents(manifestPath.get());
   if (!buf) {
