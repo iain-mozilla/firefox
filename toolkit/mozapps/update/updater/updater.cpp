@@ -59,6 +59,7 @@
 #  include "UpdateSettingsUtil.h"
 #  include "updaterfileutils_osx.h"
 #  include "umaskcontext_osx.h"
+#  include "launchchild_osx.h"
 #endif  // XP_MACOSX
 
 #include "mozilla/CmdLineAndEnvUtils.h"
@@ -94,18 +95,6 @@
 #define PARENT_WAIT 30000
 
 #if defined(XP_MACOSX)
-// These functions are defined in launchchild_osx.mm
-void CleanupElevatedMacUpdate(bool aFailureOccurred);
-bool IsOwnedByGroupAdmin(const char* aAppBundle);
-bool IsRecursivelyWritable(const char* aPath);
-void LaunchMacApp(int argc, const char** argv);
-void LaunchMacPostProcess(const char* aAppBundle);
-bool ObtainUpdaterArguments(int* aArgc, char*** aArgv,
-                            MARChannelStringTable* aMARStrings);
-bool ServeElevatedUpdate(int aArgc, const char** aArgv,
-                         const char* aMARChannelID);
-void SetGroupOwnershipAndPermissions(const char* aAppBundle);
-bool PerformInstallationFromDMG(int argc, char** argv);
 struct UpdateServerThreadArgs {
   int argc;
   const NS_tchar** argv;
