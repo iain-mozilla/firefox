@@ -12,8 +12,7 @@ int Thread::Run(ThreadFunc func, void* param) {
 
   unsigned int threadID;
 
-  mThread =
-      (HANDLE)_beginthreadex(nullptr, 0, ThreadMain, this, 0, &threadID);
+  mThread = (HANDLE)_beginthreadex(nullptr, 0, ThreadMain, this, 0, &threadID);
 
   return mThread ? 0 : -1;
 }

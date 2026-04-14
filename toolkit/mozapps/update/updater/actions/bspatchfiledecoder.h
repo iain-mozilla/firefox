@@ -7,9 +7,9 @@
 
 #if defined(MOZ_BSPATCH)
 
-#include "bspatch.h"
+#  include "bspatch.h"
 
-#include "patchfiledecoder.h"
+#  include "patchfiledecoder.h"
 class BSPatchFileDecoder : public PatchFileDecoder {
  public:
   ~BSPatchFileDecoder() override = default;

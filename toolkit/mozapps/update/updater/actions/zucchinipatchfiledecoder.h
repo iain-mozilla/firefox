@@ -6,9 +6,9 @@
 #define ZUCCHINIPATCHFILEDECODER_H
 
 #if defined(MOZ_ZUCCHINI)
-#include "mozilla/moz_zucchini.h"
+#  include "mozilla/moz_zucchini.h"
 
-#include "patchfiledecoder.h"
+#  include "patchfiledecoder.h"
 
 class ZucchiniPatchFileDecoder : public PatchFileDecoder {
  public:
@@ -37,5 +37,5 @@ class ZucchiniPatchFileDecoder : public PatchFileDecoder {
   uint32_t mSourceCrc32{};
 };
 
-#endif // MOZ_ZUCCHINI
-#endif // ZUCCHINIPATCHFILEDECODER_H
+#endif  // MOZ_ZUCCHINI
+#endif  // ZUCCHINIPATCHFILEDECODER_H

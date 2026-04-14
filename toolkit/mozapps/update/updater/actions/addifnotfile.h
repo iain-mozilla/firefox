@@ -21,5 +21,4 @@ class AddIfNotFile : public AddFile {
   mozilla::UniquePtr<NS_tchar[]> mTestFile;
 };
 
-
 #endif

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -114,7 +112,8 @@ NS_tchar* get_valid_path(NS_tchar** line, bool isdir) {
  * @return valid filesystem full path or nullptr if memory allocation fails.
  */
 NS_tchar* get_full_path(const NS_tchar* relpath, ActionContext* context) {
-  const NS_tchar* destpath = context->mStagedUpdate ? context->mWorkingDirPath : context->mInstallDirPath;
+  const NS_tchar* destpath = context->mStagedUpdate ? context->mWorkingDirPath
+                                                    : context->mInstallDirPath;
   size_t lendestpath = NS_tstrlen(destpath);
   size_t lenrelpath = NS_tstrlen(relpath);
   NS_tchar* s = new NS_tchar[lendestpath + lenrelpath + 2];
@@ -356,9 +355,7 @@ int backup_discard(const NS_tchar* path, const NS_tchar* relPath) {
 }
 
 // Helper function for post-processing a temporary backup.
-void backup_finish(const NS_tchar* path,
-                   const NS_tchar* relPath,
-                   int status) {
+void backup_finish(const NS_tchar* path, const NS_tchar* relPath, int status) {
   if (status == OK) {
     backup_discard(path, relPath);
   } else {

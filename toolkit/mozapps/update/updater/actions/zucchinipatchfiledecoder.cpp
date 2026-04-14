@@ -4,8 +4,8 @@
 
 #if defined(MOZ_ZUCCHINI)
 
-#include "zucchinipatchfiledecoder.h"
-#include "updatecommon.h"
+#  include "zucchinipatchfiledecoder.h"
+#  include "updatecommon.h"
 
 // Best-effort conversion from Zucchini status codes to updater status codes
 int FromZucchiniStatus(zucchini::status::Code code) {
@@ -43,7 +43,6 @@ int FromZucchiniStatus(zucchini::status::Code code) {
   }
   return result;
 }
-
 
 unsigned int ZucchiniPatchFileDecoder::ComputeCrc32(const uint8_t* aBuf,
                                                     size_t aBufSize) {

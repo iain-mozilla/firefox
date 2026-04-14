@@ -63,7 +63,6 @@
 
 #include "mozilla/CmdLineAndEnvUtils.h"
 #include "mozilla/UniquePtr.h"
-#include "mozilla/UniquePtrExtensions.h"
 #ifdef XP_WIN
 #  include "mozilla/Maybe.h"
 #  include "mozilla/WinHeaderOnlyUtils.h"
@@ -824,10 +823,9 @@ static int remove_recursive_on_reboot(const NS_tchar* path,
 
 static int DoUpdate();
 
-
 #if defined(MOZ_ZUCCHINI)
 void LogZucchiniMessage(const char* aMessage) { LOG(("%s", aMessage)); }
-#endif // defined(MOZ_ZUCCHINI)
+#endif  // defined(MOZ_ZUCCHINI)
 
 #ifdef XP_WIN
 #  include "nsWindowsRestart.cpp"

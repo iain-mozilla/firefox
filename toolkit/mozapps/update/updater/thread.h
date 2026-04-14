@@ -18,11 +18,11 @@
 typedef void (*ThreadFunc)(void* param);
 
 class Thread {
-  public:
-    int Run(ThreadFunc func, void* param);
-    int Join();
+ public:
+  int Run(ThreadFunc func, void* param);
+  int Join();
 
-  private:
+ private:
 #ifdef XP_WIN
   static unsigned __stdcall ThreadMain(void* p);
   HANDLE mThread;

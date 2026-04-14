@@ -28,7 +28,5 @@ FILE* ensure_open(const NS_tchar* path, const NS_tchar* flags,
 int backup_create(const NS_tchar* path);
 int backup_restore(const NS_tchar* path, const NS_tchar* relPath);
 int backup_discard(const NS_tchar* path, const NS_tchar* relPath);
-void backup_finish(const NS_tchar* path,
-                   const NS_tchar* relPath,
-                   int status);
+void backup_finish(const NS_tchar* path, const NS_tchar* relPath, int status);
 #endif

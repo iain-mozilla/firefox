@@ -126,7 +126,8 @@ int PatchFile::Prepare() {
   mPatchIndex = sPatchIndex++;
 
   NS_tsnprintf(mPatchPath, sizeof(mPatchPath) / sizeof(mPatchPath[0]),
-               NS_T("%s/updating/%d.patch"), mContext->mWorkingDirPath, mPatchIndex);
+               NS_T("%s/updating/%d.patch"), mContext->mWorkingDirPath,
+               mPatchIndex);
 
   // The removal of pre-existing patch files here is in case a previous update
   // crashed and left these files behind.
@@ -156,9 +157,11 @@ int PatchFile::Prepare() {
     return STRING_CONVERSION_ERROR;
   }
 
-  int rv = mContext->mArchiveReader->ExtractFileToStream(sourcefile, mPatchStream);
+  int rv =
+      mContext->mArchiveReader->ExtractFileToStream(sourcefile, mPatchStream);
 #else
-  int rv = mContext->mArchiveReader->ExtractFileToStream(mPatchFile, mPatchStream);
+  int rv =
+      mContext->mArchiveReader->ExtractFileToStream(mPatchFile, mPatchStream);
 #endif
 
   return rv;
