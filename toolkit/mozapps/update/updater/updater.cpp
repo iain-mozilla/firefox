@@ -74,6 +74,7 @@
 #include "autofile.h"
 #include "thread.h"
 
+#include "actionlist.h"
 #include "actions/actionhelpers.h"
 #include "actions/addfile.h"
 #include "actions/addiffile.h"
@@ -82,12 +83,6 @@
 #include "actions/patchiffile.h"
 #include "actions/removedir.h"
 #include "actions/removefile.h"
-
-// Amount of the progress bar to use in each of the 3 update stages,
-// should total 100.0.
-#define PROGRESS_PREPARE_SIZE 20.0f
-#define PROGRESS_EXECUTE_SIZE 75.0f
-#define PROGRESS_FINISH_SIZE 5.0f
 
 // Maximum amount of time in ms to wait for the parent process to close. The 30
 // seconds is rather long but there have been bug reports where the parent
@@ -3204,112 +3199,6 @@ int NS_main(int argc, NS_tchar** argv) {
   return retVal ? retVal : (gSucceeded ? 0 : 1);
 }
 
-class ActionList {
- public:
-  ActionList() : mFirst(nullptr), mLast(nullptr), mCount(0) {}
-  ~ActionList();
-
-  void Append(Action* action);
-  int Prepare();
-  int Execute();
-  void Finish(int status);
-
- private:
-  Action* mFirst;
-  Action* mLast;
-  int mCount;
-};
-
-ActionList::~ActionList() {
-  Action* a = mFirst;
-  while (a) {
-    Action* b = a;
-    a = a->mNext;
-    delete b;
-  }
-}
-
-void ActionList::Append(Action* action) {
-  if (mLast) {
-    mLast->mNext = action;
-  } else {
-    mFirst = action;
-  }
-
-  mLast = action;
-  mCount++;
-}
-
-int ActionList::Prepare() {
-  // If the action list is empty then we should fail in order to signal that
-  // something has gone wrong. Otherwise we report success when nothing is
-  // actually done. See bug 327140.
-  if (mCount == 0) {
-    LOG(("empty action list"));
-    return MAR_ERROR_EMPTY_ACTION_LIST;
-  }
-
-  Action* a = mFirst;
-  int i = 0;
-  while (a) {
-    int rv = a->Prepare();
-    if (rv) {
-      return rv;
-    }
-
-    float percent = float(++i) / float(mCount);
-    UpdateProgressUI(PROGRESS_PREPARE_SIZE * percent);
-
-    a = a->mNext;
-  }
-
-  return OK;
-}
-
-int ActionList::Execute() {
-  int currentProgress = 0, maxProgress = 0;
-  Action* a = mFirst;
-  while (a) {
-    maxProgress += a->mProgressCost;
-    a = a->mNext;
-  }
-
-  a = mFirst;
-  while (a) {
-    int rv = a->Execute();
-    if (rv) {
-      LOG(("### execution failed"));
-      return rv;
-    }
-
-    currentProgress += a->mProgressCost;
-    float percent = float(currentProgress) / float(maxProgress);
-    UpdateProgressUI(PROGRESS_PREPARE_SIZE + PROGRESS_EXECUTE_SIZE * percent);
-
-    a = a->mNext;
-  }
-
-  return OK;
-}
-
-void ActionList::Finish(int status) {
-  Action* a = mFirst;
-  int i = 0;
-  while (a) {
-    a->Finish(status);
-
-    float percent = float(++i) / float(mCount);
-    UpdateProgressUI(PROGRESS_PREPARE_SIZE + PROGRESS_EXECUTE_SIZE +
-                     PROGRESS_FINISH_SIZE * percent);
-
-    a = a->mNext;
-  }
-
-  if (status == OK) {
-    gSucceeded = true;
-  }
-}
-
 #ifdef XP_WIN
 int add_dir_entries(const NS_tchar* dirpath, ActionList* list) {
   int rv = OK;
@@ -3846,7 +3735,10 @@ int DoUpdate() {
 
   rv = list.Execute();
 
-  list.Finish(rv);
+  if (list.Finish(rv)) {
+    gSucceeded = true;
+  }
+
   free(buf);
   return rv;
 }

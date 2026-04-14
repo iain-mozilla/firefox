@@ -7,6 +7,12 @@
 
 #include "updatedefines.h"
 
+// Amount of the progress bar to use in each of the 3 update stages,
+// should total 100.0.
+#define PROGRESS_PREPARE_SIZE 20.0f
+#define PROGRESS_EXECUTE_SIZE 75.0f
+#define PROGRESS_FINISH_SIZE 5.0f
+
 #if defined(XP_WIN)
 typedef WCHAR NS_tchar;
 #  define NS_main wmain
