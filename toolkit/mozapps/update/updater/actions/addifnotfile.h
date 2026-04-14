@@ -10,7 +10,7 @@
 
 class AddIfNotFile : public AddFile {
  public:
-  AddIfNotFile(ActionContext* context): AddFile(context) {}
+  using AddFile::AddFile;
 
   int Parse(NS_tchar* line) override;
   int Prepare() override;

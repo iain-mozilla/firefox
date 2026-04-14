@@ -10,8 +10,8 @@
 
 class PatchIfFile : public PatchFile {
  public:
-  PatchIfFile(ActionContext* context) : PatchFile(context) {}
-  
+  using PatchFile::PatchFile;
+
   int Parse(NS_tchar* line) override;
   int Prepare() override;  // should check for patch file and for checksum here
   int Execute() override;

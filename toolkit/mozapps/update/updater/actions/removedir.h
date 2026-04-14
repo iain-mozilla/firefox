@@ -13,7 +13,7 @@
 
 class RemoveDir : public Action {
  public:
-  RemoveDir(ActionContext* context) : mSkip(0), mContext(context) {}
+  explicit RemoveDir(ActionContext* context) : Action(context), mSkip(0) {}
 
   int Parse(NS_tchar* line) override;
   int Prepare() override;  // check that the source dir exists
@@ -24,7 +24,6 @@ class RemoveDir : public Action {
   mozilla::UniquePtr<NS_tchar[]> mDir;
   mozilla::UniquePtr<NS_tchar[]> mRelPath;
   int mSkip;
-  ActionContext* mContext;
 };
 
 #endif

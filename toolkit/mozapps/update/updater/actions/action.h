@@ -29,7 +29,8 @@ struct ActionContext {
 
 class Action {
  public:
-  Action() : mProgressCost(1), mNext(nullptr) {}
+  Action(ActionContext* context)
+      : mProgressCost(1), mContext(context), mNext(nullptr) {}
   virtual ~Action() = default;
 
   virtual int Parse(NS_tchar* line) = 0;
@@ -48,6 +49,9 @@ class Action {
   virtual void Finish(int status) = 0;
 
   int mProgressCost;
+
+ protected:
+  ActionContext* mContext;
 
  private:
   Action* mNext;

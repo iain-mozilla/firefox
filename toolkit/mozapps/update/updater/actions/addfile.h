@@ -11,15 +11,12 @@
 
 class AddFile : public Action {
  public:
-  AddFile(ActionContext* context) : mContext(context), mAdded(false) {}
+  explicit AddFile(ActionContext* context) : Action(context), mAdded(false) {}
 
   int Parse(NS_tchar* line) override;
   int Prepare() override;
   int Execute() override;
   void Finish(int status) override;
-
- protected:
-  ActionContext* mContext;
 
  private:
   mozilla::UniquePtr<NS_tchar[]> mFile;

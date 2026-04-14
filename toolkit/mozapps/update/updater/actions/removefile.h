@@ -13,7 +13,7 @@
 
 class RemoveFile : public Action {
  public:
-  RemoveFile(ActionContext* context) : mSkip(0), mContext(context) {}
+  explicit RemoveFile(ActionContext* context) : Action(context), mSkip(0) {}
 
   int Parse(NS_tchar* line) override;
   int Prepare() override;
@@ -24,7 +24,6 @@ class RemoveFile : public Action {
   mozilla::UniquePtr<NS_tchar[]> mFile;
   mozilla::UniquePtr<NS_tchar[]> mRelPath;
   int mSkip;
-  ActionContext* mContext;
 };
 
 #endif

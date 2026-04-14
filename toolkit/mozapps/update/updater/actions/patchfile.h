@@ -5,6 +5,8 @@
 #ifndef PATCHFILE_H
 #define PATCHFILE_H
 
+#include <limits.h>
+
 #include "mozilla/UniquePtr.h"
 #include "../autofile.h"
 #include "action.h"
@@ -12,8 +14,8 @@
 
 class PatchFile : public Action {
  public:
-  PatchFile(ActionContext* context)
-    : mContext(context), mPatchFile(nullptr), mPatchIndex(-1), mBufSize(0) {}
+  explicit PatchFile(ActionContext* context)
+      : Action(context), mPatchFile(nullptr), mPatchIndex(-1), mBufSize(0) {}
 
   ~PatchFile() override;
 
@@ -21,9 +23,6 @@ class PatchFile : public Action {
   int Prepare() override;  // should check for patch file and for checksum here
   int Execute() override;
   void Finish(int status) override;
-
- protected:
-  ActionContext* mContext;
 
  private:
   int LoadSourceFile(FILE* ofile);
