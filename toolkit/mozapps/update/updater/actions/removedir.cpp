@@ -4,7 +4,7 @@
 
 #include <sys/stat.h>
 
-#include "actionhelpers.h"
+#include "../actionhelpers.h"
 #include "removedir.h"
 #include "updatererrors.h"
 

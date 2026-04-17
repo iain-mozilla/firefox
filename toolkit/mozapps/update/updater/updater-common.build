@@ -9,6 +9,7 @@ if link_with_nss:
     DEFINES["MAR_NSS"] = True
 
 srcs = [
+    "actionhelpers.cpp",
     "actionlist.cpp",
     "archivereader.cpp",
     "updater.cpp",

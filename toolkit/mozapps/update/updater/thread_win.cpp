@@ -4,6 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "mozilla/WinHeaderOnlyUtils.h"
+#include "mozilla/WinTokenUtils.h"
+#include <climits>
+
 #include "thread.h"
 
 int Thread::Run(ThreadFunc func, void* param) {
@@ -23,7 +27,7 @@ int Thread::Join() {
   return 0;
 }
 
-static unsigned __stdcall Thread::ThreadMain(void* p) {
+unsigned __stdcall Thread::ThreadMain(void* p) {
   Thread* self = (Thread*)p;
   self->mThreadFunc(self->mThreadParam);
   return 0;

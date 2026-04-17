@@ -3,9 +3,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include <sys/stat.h>
+#ifdef XP_WIN
+#  include "mozilla/Maybe.h"
+#  include "mozilla/WinHeaderOnlyUtils.h"
+#  include "mozilla/WinTokenUtils.h"
+#  include <climits>
+#endif  // XP_WIN
 
 #include "actionhelpers.h"
-#include "action.h"
+#include "actions/action.h"
 #include "updatererrors.h"
 
 size_t mmin(size_t a, size_t b) { return (a > b) ? b : a; }
@@ -285,7 +291,7 @@ int backup_create(const NS_tchar* path) {
 
 // Rename the backup of the specified file that was created by renaming it back
 // to the original file.
-int backup_restore(const NS_tchar* path, const NS_tchar* relPath) {
+static int backup_restore(const NS_tchar* path, const NS_tchar* relPath) {
   NS_tchar backup[MAXPATHLEN];
   NS_tsnprintf(backup, sizeof(backup) / sizeof(backup[0]),
                NS_T("%s") BACKUP_EXT, path);
@@ -303,7 +309,8 @@ int backup_restore(const NS_tchar* path, const NS_tchar* relPath) {
 }
 
 // Discard the backup of the specified file that was created by renaming it.
-int backup_discard(const NS_tchar* path, const NS_tchar* relPath) {
+static int backup_discard(const NS_tchar* path, const NS_tchar* relPath,
+                          const NS_tchar* deleteDirPath, bool stagedOrReplaced) {
   NS_tchar backup[MAXPATHLEN];
   NS_tsnprintf(backup, sizeof(backup) / sizeof(backup[0]),
                NS_T("%s") BACKUP_EXT, path);
@@ -319,10 +326,10 @@ int backup_discard(const NS_tchar* path, const NS_tchar* relPath) {
 
   int rv = ensure_remove(backup);
 #if defined(XP_WIN)
-  if (rv && !sStagedUpdate && !sReplaceRequest) {
+  if (rv && !stagedOrReplaced) {
     LOG(("backup_discard: unable to remove: " LOG_S, relBackup));
     NS_tchar path[MAXPATHLEN + 1];
-    GetUUIDTempFilePath(gDeleteDirPath, L"moz", path);
+    GetUUIDTempFilePath(deleteDirPath, L"moz", path);
     if (rename_file(backup, path)) {
       LOG(("backup_discard: failed to rename file:" LOG_S ", dst:" LOG_S,
            relBackup, relPath));
@@ -355,9 +362,10 @@ int backup_discard(const NS_tchar* path, const NS_tchar* relPath) {
 }
 
 // Helper function for post-processing a temporary backup.
-void backup_finish(const NS_tchar* path, const NS_tchar* relPath, int status) {
+void backup_finish(const NS_tchar* path, const NS_tchar* relPath, int status,
+                   const NS_tchar* deleteDirPath, bool stagedOrReplaced) {
   if (status == OK) {
-    backup_discard(path, relPath);
+    backup_discard(path, relPath, deleteDirPath, stagedOrReplaced);
   } else {
     backup_restore(path, relPath);
   }

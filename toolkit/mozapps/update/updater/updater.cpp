@@ -30,8 +30,6 @@
  *  method   = "remove" | "rmdir"
  */
 
-#include "actions/action.h"
-
 #if defined(MOZ_ZUCCHINI)
 #  include "mozilla/moz_zucchini.h"
 #endif  // defined(MOZ_ZUCCHINI)
@@ -75,7 +73,7 @@
 #include "thread.h"
 
 #include "actionlist.h"
-#include "actions/actionhelpers.h"
+#include "actionhelpers.h"
 #include "actions/addfile.h"
 #include "actions/addiffile.h"
 #include "actions/addifnotfile.h"
@@ -103,10 +101,6 @@ struct UpdateServerThreadArgs {
 
 #ifndef NULL
 #  define NULL (0)
-#endif
-
-#ifndef SSIZE_MAX
-#  define SSIZE_MAX LONG_MAX
 #endif
 
 // We want to use execv to invoke the callback executable on platforms where
@@ -2048,10 +2042,6 @@ int NS_main(int argc, NS_tchar** argv) {
     *slash = NS_T('\0');
   }
 
-  // Options are set, so create the ActionContext
-  gActionContext = new ActionContext(sStagedUpdate, gWorkingDirPath,
-                                     gInstallDirPath, &gArchiveReader);
-
 #ifdef XP_WIN
   bool useService = false;
   bool testOnlyFallbackKeyExists = false;
@@ -2120,6 +2110,16 @@ int NS_main(int argc, NS_tchar** argv) {
       sReplaceRequest = true;
     }
   }
+
+  // Options are set, so create the ActionContext
+  gActionContext =
+      new ActionContext(sStagedUpdate, sReplaceRequest, gWorkingDirPath,
+                        gInstallDirPath, &gArchiveReader);
+#ifdef XP_WIN
+  gActionContext->mCallbackRelPath = gCallbackRelPath;
+  gActionContext->mCallbackBackupPath = gCallbackBackupPath;
+  gActionContext->mDeleteDirPath = gDeleteDirPath;
+#endif
 
   if (!isDMGInstall) {
     // This check is also performed in workmonitor.cpp since the maintenance

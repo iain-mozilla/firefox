@@ -4,7 +4,7 @@
 
 #include <sys/stat.h>
 
-#include "actionhelpers.h"
+#include "../actionhelpers.h"
 #include "removefile.h"
 #include "updatererrors.h"
 
@@ -112,6 +112,11 @@ void RemoveFile::Finish(int status) {
 
   // Staged updates don't create backup files.
   if (!mContext->mStagedUpdate) {
-    backup_finish(mFile.get(), mRelPath.get(), status);
+    const NS_tchar* deleteDirPath = nullptr;
+#ifdef XP_WIN
+    deleteDirPath = mContext->mDeleteDirPath;
+#endif
+    backup_finish(mFile.get(), mRelPath.get(), status, deleteDirPath,
+                  mContext->stagedOrReplaced());
   }
 }

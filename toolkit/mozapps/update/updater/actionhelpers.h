@@ -9,7 +9,11 @@
 
 #include <stdio.h>
 #include "updatecommon.h"
-#include "action.h"
+#include "actioncontext.h"
+
+#ifndef SSIZE_MAX
+#  define SSIZE_MAX LONG_MAX
+#endif
 
 const NS_tchar kQuote[] = NS_T("\"");
 size_t mmin(size_t a, size_t b);
@@ -26,7 +30,6 @@ FILE* ensure_open(const NS_tchar* path, const NS_tchar* flags,
 
 // FIXME: Different file?
 int backup_create(const NS_tchar* path);
-int backup_restore(const NS_tchar* path, const NS_tchar* relPath);
-int backup_discard(const NS_tchar* path, const NS_tchar* relPath);
-void backup_finish(const NS_tchar* path, const NS_tchar* relPath, int status);
+void backup_finish(const NS_tchar* path, const NS_tchar* relPath, int status,
+                   const NS_tchar* deleteDirPath, bool stagedOrReplaced);
 #endif

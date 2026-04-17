@@ -5,10 +5,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifdef XP_WIN
+#  include <climits>
+#endif
+
 #include "mozilla/UniquePtr.h"
 #include "mozilla/UniquePtrExtensions.h"
 
-#include "actionhelpers.h"
+#include "../actionhelpers.h"
 #include "patchfile.h"
 #include "updatererrors.h"
 
@@ -195,10 +199,10 @@ int PatchFile::Execute() {
 
   FILE* origfile = nullptr;
 #ifdef XP_WIN
-  if (NS_tstrcmp(mFileRelPath.get(), gCallbackRelPath) == 0) {
+  if (NS_tstrcmp(mFileRelPath.get(), mContext->mCallbackRelPath) == 0) {
     // Read from the copy of the callback when patching since the callback can't
     // be opened for reading to prevent the application from being launched.
-    origfile = NS_tfopen(gCallbackBackupPath, NS_T("rb"));
+    origfile = NS_tfopen(mContext->mCallbackBackupPath, NS_T("rb"));
   } else {
     origfile = NS_tfopen(mFile.get(), NS_T("rb"));
   }
@@ -324,6 +328,11 @@ void PatchFile::Finish(int status) {
 
   // Staged updates don't create backup files.
   if (!mContext->mStagedUpdate) {
-    backup_finish(mFile.get(), mFileRelPath.get(), status);
+    const NS_tchar* deleteDirPath = nullptr;
+#ifdef XP_WIN
+    deleteDirPath = mContext->mDeleteDirPath;
+#endif
+    backup_finish(mFile.get(), mFileRelPath.get(), status, deleteDirPath,
+                  mContext->stagedOrReplaced());
   }
 }

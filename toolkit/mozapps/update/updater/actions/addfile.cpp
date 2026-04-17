@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "actionhelpers.h"
+#include "../actionhelpers.h"
 #include "addfile.h"
 #include "updatererrors.h"
 
@@ -74,6 +74,11 @@ int AddFile::Execute() {
 }
 
 void AddFile::Finish(int status) {
+  const NS_tchar* deleteDirPath = nullptr;
+#ifdef XP_WIN
+  deleteDirPath = mContext->mDeleteDirPath;
+#endif
+
   LOG(("FINISH ADD " LOG_S, mRelPath.get()));
   // Staged updates don't create backup files.
   if (!mContext->mStagedUpdate) {
@@ -86,6 +91,8 @@ void AddFile::Finish(int status) {
              mFile.get(), errno));
       }
     }
-    backup_finish(mFile.get(), mRelPath.get(), status);
+
+    backup_finish(mFile.get(), mRelPath.get(), status, deleteDirPath,
+                  mContext->stagedOrReplaced());
   }
 }

@@ -5,23 +5,9 @@
 #ifndef ACTION_H
 #define ACTION_H
 
-#include "../archivereader.h"
 // For NS_tchar
 #include "readstrings.h"
-
-struct ActionContext {
-  ActionContext(bool stagedUpdate, NS_tchar* workingDirPath,
-                NS_tchar* installDirPath, ArchiveReader* mArchiveReader)
-      : mStagedUpdate(stagedUpdate),
-        mWorkingDirPath(workingDirPath),
-        mInstallDirPath(installDirPath),
-        mArchiveReader(mArchiveReader) {}
-
-  bool mStagedUpdate;
-  const NS_tchar* mWorkingDirPath;
-  const NS_tchar* mInstallDirPath;
-  ArchiveReader* mArchiveReader;
-};
+#include "../actioncontext.h"
 
 class Action {
  public:
