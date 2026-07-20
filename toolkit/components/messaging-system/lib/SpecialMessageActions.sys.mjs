@@ -896,17 +896,17 @@ export const SpecialMessageActions = {
         );
         break;
       case "CONFIRM_LAUNCH_ON_LOGIN": {
-        const { WindowsLaunchOnLogin } = ChromeUtils.importESModule(
-          "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs"
+        const { LaunchOnLogin } = ChromeUtils.importESModule(
+          "resource://gre/modules/LaunchOnLogin.sys.mjs"
         );
-        await WindowsLaunchOnLogin.createLaunchOnLogin();
+        await LaunchOnLogin.createLaunchOnLogin();
         break;
       }
       case "REMOVE_LAUNCH_ON_LOGIN": {
-        const { WindowsLaunchOnLogin } = ChromeUtils.importESModule(
-          "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs"
+        const { LaunchOnLogin } = ChromeUtils.importESModule(
+          "resource://gre/modules/LaunchOnLogin.sys.mjs"
         );
-        await WindowsLaunchOnLogin.removeLaunchOnLogin();
+        await LaunchOnLogin.removeLaunchOnLogin();
         break;
       }
       case "CREATE_GROUP_FROM_CURRENT_TAB": {

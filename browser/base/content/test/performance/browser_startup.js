@@ -107,10 +107,12 @@ const startupPhases = {
   },
 };
 
-if (AppConstants.platform == "win") {
-  // On Windows we call checkForLaunchOnLogin early in startup.
+if (AppConstants.platform == "win" || AppConstants.platform == "macos") {
+  // we call checkForLaunchOnLogin early in startup.
   startupPhases["before profile selection"].allowlist.modules.add(
-    "moz-src:///browser/components/shell/StartupOSIntegration.sys.mjs"
+    "moz-src:///browser/components/shell/StartupOSIntegration.sys.mjs",
+    "resource://gre/modules/LaunchOnLogin.sys.mjs",
+    "resource://gre/modules/launchonlogin/WindowsLaunchOnLogin.sys.mjs,"
   );
 }
 
