@@ -25,7 +25,7 @@ export var WindowsLaunchOnLogin = {
    * Accepts another function as an argument and provides an open Windows
    * launch on login registry key for the passed-in function to manipulate.
    *
-   * @param func
+   * @param {func} func
    *        The function to use.
    */
   async withLaunchOnLoginRegistryKey(func) {
@@ -351,3 +351,5 @@ export var WindowsLaunchOnLogin = {
     return registryName;
   },
 };
+
+export var LaunchOnLoginImpl = WindowsLaunchOnLogin;
