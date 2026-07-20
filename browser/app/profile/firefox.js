@@ -345,6 +345,10 @@ pref("browser.startup.couldRestoreSession.count", 0);
 // users as it is not implemented anywhere else.
 #if defined(XP_WIN)
 pref("browser.startup.preXulSkeletonUI", true);
+#endif
+
+// These are called browser.startup.windowsLaunchOnLogin.* because they originated
+// on Windows, but they now operate on macOS as well.
 
 // Whether the checkbox to enable Windows launch on login is shown
 pref("browser.startup.windowsLaunchOnLogin.enabled", true);
@@ -357,7 +361,6 @@ pref("browser.startup.windowsLaunchOnLogin.disableLaunchOnLoginPrompt", false);
 // direction.
 pref("browser.startup.windowsLaunchOnLogin.defaultEnabled", false);
 pref("browser.startup.windowsLaunchOnLogin.alreadyApplied", false);
-#endif
 
 // Show an upgrade dialog on major upgrades.
 pref("browser.startup.upgradeDialog.enabled", false);
