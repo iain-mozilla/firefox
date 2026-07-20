@@ -37,7 +37,7 @@ ChromeUtils.defineESModuleGetters(this, {
   TranslationsParent: "resource://gre/actors/TranslationsParent.sys.mjs",
   TranslationsUtils:
     "chrome://global/content/translations/TranslationsUtils.mjs",
-  WindowsLaunchOnLogin: "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs",
+  LaunchOnLogin: "resource://gre/modules/LaunchOnLogin.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   FormAutofillPreferences:
     "resource://autofill/FormAutofillPreferences.sys.mjs",
@@ -149,17 +149,11 @@ Preferences.addSetting(
     // but it is not possible to change it back to enabled as the disabled value is just a random
     // hexadecimal number
     setup() {
-      if (AppConstants.platform !== "win") {
-        /**
-         * WindowsLaunchOnLogin isnt available if not on windows
-         * but this setup function still fires, so must prevent
-         * WindowsLaunchOnLogin.getLaunchOnLoginApproved
-         * below from executing unnecessarily.
-         */
+      if (!LaunchOnLogin.isSupported()) {
         return;
       }
       // @ts-ignore bug 1996860
-      WindowsLaunchOnLogin.getLaunchOnLoginApproved().then(val => {
+      LaunchOnLogin.getLaunchOnLoginApproved().then(val => {
         this._getLaunchOnLoginApprovedCachedValue = val;
       });
     },
@@ -185,13 +179,7 @@ Preferences.addSetting(
       return this._getLaunchOnLoginEnabledValue;
     },
     setup(emitChange) {
-      if (AppConstants.platform !== "win") {
-        /**
-         * WindowsLaunchOnLogin isnt available if not on windows
-         * but this setup function still fires, so must prevent
-         * WindowsLaunchOnLogin.getLaunchOnLoginEnabled
-         * below from executing unnecessarily.
-         */
+      if (!LaunchOnLogin.isSupported()) {
         return;
       }
 
@@ -210,7 +198,7 @@ Preferences.addSetting(
         maybeEmitChange();
       } else {
         // @ts-ignore bug 1996860
-        WindowsLaunchOnLogin.getLaunchOnLoginEnabled().then(val => {
+        LaunchOnLogin.getLaunchOnLoginEnabled().then(val => {
           getLaunchOnLoginEnabledValue = val;
           maybeEmitChange();
         });
@@ -218,7 +206,7 @@ Preferences.addSetting(
     },
     visible: ({ windowsLaunchOnLoginEnabled }) => {
       let isVisible =
-        AppConstants.platform === "win" && windowsLaunchOnLoginEnabled.value;
+        LaunchOnLogin.isSupported() && windowsLaunchOnLoginEnabled.value;
       if (isVisible) {
         // @ts-ignore bug 1996860
         NimbusFeatures.windowsLaunchOnLogin.recordExposureEvent({
@@ -239,7 +227,7 @@ Preferences.addSetting(
         // registry fails. As such we pass an arbitrary AUMID for the purpose
         // of testing.
         // @ts-ignore bug 1996860
-        WindowsLaunchOnLogin.createLaunchOnLogin();
+        LaunchOnLogin.createLaunchOnLogin();
         Services.prefs.setBoolPref(
           "browser.startup.windowsLaunchOnLogin.disableLaunchOnLoginPrompt",
           true
@@ -247,7 +235,7 @@ Preferences.addSetting(
       } else {
         // windowsLaunchOnLogin has been unchecked: delete registry key and shortcut
         // @ts-ignore bug 1996860
-        WindowsLaunchOnLogin.removeLaunchOnLogin();
+        LaunchOnLogin.removeLaunchOnLogin();
       }
     },
   })
@@ -257,7 +245,7 @@ Preferences.addSetting({
   id: "windowsLaunchOnLoginDisabledProfileBox",
   deps: ["windowsLaunchOnLoginEnabled"],
   visible: ({ windowsLaunchOnLoginEnabled }) => {
-    if (AppConstants.platform !== "win") {
+    if (!LaunchOnLogin.isSupported()) {
       return false;
     }
     let startWithLastProfile = Cc[
@@ -272,7 +260,7 @@ Preferences.addSetting({
   id: "windowsLaunchOnLoginDisabledBox",
   deps: ["launchOnLoginApproved", "windowsLaunchOnLoginEnabled"],
   visible: ({ launchOnLoginApproved, windowsLaunchOnLoginEnabled }) => {
-    if (AppConstants.platform !== "win") {
+    if (!LaunchOnLogin.isSupported()) {
       return false;
     }
     let startWithLastProfile = Cc[
