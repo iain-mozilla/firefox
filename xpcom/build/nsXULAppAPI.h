@@ -259,6 +259,8 @@ void XRE_SetAndroidChildFds(JNIEnv* env, jintArray fds);
 nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
                               const XREChildData* aChildData);
 
+nsresult XRE_InitPWAProcess(const char* uuid, int argc, char* argv[]);
+
 /**
  * Return the GeckoProcessType of the current process.
  */

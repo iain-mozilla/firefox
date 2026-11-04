@@ -37,6 +37,8 @@ class ProcessChild {
   static void AddPlatformBuildID(geckoargs::ChildProcessArgs& aExtraArgs);
 
   static bool InitPrefs(int aArgc, char* aArgv[]);
+  static bool InitPrefs(ReadOnlySharedMemoryHandle prefsHandle,
+                        ReadOnlySharedMemoryHandle prefMapHandle);
 
   virtual void CleanUp() {}
 

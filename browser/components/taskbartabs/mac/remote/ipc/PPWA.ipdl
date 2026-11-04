@@ -1,0 +1,30 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+include CrashReporterInitArgs;
+include protocol PPWAWindow;
+
+namespace mozilla {
+namespace pwa {
+
+// Top-level actor that represents the PWA process type in the main process.
+// The main process will be the Parent and the PWA process will be the Child.
+// This actor technically governs the lifecycle of the new process but that
+// process should really considered to be owned by the main or content process
+// connected with PPWAWindow.
+[NeedsOtherPid, ChildProc=PWA]
+async protocol PPWA {
+parent:
+  async InitCrashReporter(CrashReporterInitArgs aInitArgs);
+
+  async ChildConnected();
+
+child:
+  // Create PPWAWindowChild actor.  The main process directs the other endpoint
+  // to the intended parent process (main or content).
+  async CreatePWAWindowChild(Endpoint<PPWAWindowChild> aEndpoint);
+};
+
+} // namespace pwa
+} // namespace mozilla

@@ -946,6 +946,24 @@ bool GeckoChildProcessHost::InitializeChannel(
   return true;
 }
 
+bool GeckoChildProcessHost::InitializeChannelWithHandle(
+    IPC::Channel::ChannelHandle* aClientHandle) {
+  mNodeController = NodeController::GetSingleton();
+  if (!mNodeController->InviteChildProcessWithHandle(this, aClientHandle,
+                                                    &mInitialPort,
+                                                    getter_AddRefs(mNodeChannel))) {
+    return false;
+  }
+
+  MOZ_ASSERT(mInitialPort.IsValid());
+  MOZ_ASSERT(mNodeChannel);
+
+  MonitorAutoLock lock(mMonitor);
+  mProcessState = CHANNEL_INITIALIZED;
+  lock.Notify();
+  return true;
+}
+
 void GeckoChildProcessHost::SetAlreadyDead() {
   mozilla::AutoWriteLock handleLock(mHandleLock);
   if (mChildProcessHandle &&

@@ -187,6 +187,7 @@ inline ArgResult CheckArg(int& aArgc, CharT** aArgv, const char* aArg,
   CharT** curarg = aArgv + 1;  // skip argv[0]
   ArgResult ar = ARG_NONE;
 
+  printf("Looking for %s", aArg);
   while (*curarg) {
     if (const auto arg = ReadAsOption(*curarg)) {
       if (ArgStartsWith(arg.value(), aArg)) {
@@ -250,6 +251,11 @@ inline ArgResult CheckArg(int& aArgc, CharT** aArgv, const char* aArg,
     ++curarg;
   }
 
+  if (aParam && ar == ARG_FOUND) {
+    printf(" = %s\n", *aParam);
+  } else {
+    printf(" <Not found>\n");
+  }
   return ar;
 }
 

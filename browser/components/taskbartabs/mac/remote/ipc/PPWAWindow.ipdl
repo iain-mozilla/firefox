@@ -1,0 +1,23 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+// using mozilla::LayoutDeviceIntRect from "Units.h";
+
+include protocol PPWA;
+
+namespace mozilla {
+namespace pwa {
+
+// Top-level actor that represents the Demo process type in the content process.
+// The content process will be the Parent and the Demo process will be the Child.
+[ChildProc=PWA]
+async protocol PPWAWindow {
+child:
+  async SetTitle(nsString title);
+
+  async __delete__();
+};
+
+} // namespace pwa
+} // namespace mozilla

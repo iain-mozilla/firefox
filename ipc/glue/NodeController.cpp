@@ -800,8 +800,16 @@ bool NodeController::InviteChildProcess(
     return false;
   }
 
+  return InviteChildProcessWithHandle(aChildProcessHost, &serverHandle,
+                                      aInitialPort, aNodeChannel);
+}
+
+bool NodeController::InviteChildProcessWithHandle(
+    GeckoChildProcessHost* aChildProcessHost,
+    IPC::Channel::ChannelHandle* aServerHandle, ScopedPort* aInitialPort,
+    NodeChannel** aNodeChannel) {
   RefPtr<IPC::Channel> channel = IPC::Channel::Create(
-      std::move(serverHandle), IPC::Channel::MODE_BROKER_SERVER,
+      std::move(*aServerHandle), IPC::Channel::MODE_BROKER_SERVER,
       base::kInvalidProcessId);
   MOZ_ASSERT(channel->GetKind() == mChannelKind);
 

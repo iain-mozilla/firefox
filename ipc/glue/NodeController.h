@@ -94,6 +94,12 @@ class NodeController final : public mojo::core::ports::NodeDelegate,
   bool InviteChildProcess(GeckoChildProcessHost* aChildProcessHost,
                           IPC::Channel::ChannelHandle* aClientHandle,
                           ScopedPort* aInitialPort, NodeChannel** aNodeChannel);
+  // This does the same as the above without creating a pipe. It uses an existing
+  // `ChannelHandle` as the server side of the connection.
+  bool InviteChildProcessWithHandle(GeckoChildProcessHost* aChildProcessHost,
+                                    IPC::Channel::ChannelHandle* aServerHandle,
+                                    ScopedPort* aInitialPort,
+                                    NodeChannel** aNodeChannel);
 
   // Called as the IO thread is started in the parent process.
   static void InitBrokerProcess(const IPC::Channel::ChannelKind* aChannelKind);

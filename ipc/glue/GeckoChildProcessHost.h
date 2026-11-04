@@ -164,6 +164,7 @@ class GeckoChildProcessHost : public SupportsWeakPtr,
   RefPtr<ProcessHandlePromise> WhenProcessHandleReady();
 
   bool InitializeChannel(IPC::Channel::ChannelHandle* aClientHandle);
+  bool InitializeChannelWithHandle(IPC::Channel::ChannelHandle* aClientHandle);
 
   virtual bool CanShutdown() { return true; }
 
@@ -197,6 +198,8 @@ class GeckoChildProcessHost : public SupportsWeakPtr,
   GeckoChildID GetChildID() const { return mChildID; }
 
   GeckoProcessType GetProcessType() { return mProcessType; }
+
+  nsID GetInitialChannelId() { return mInitialChannelId; }
 
 #ifdef XP_MACOSX
   task_t GetChildTask();

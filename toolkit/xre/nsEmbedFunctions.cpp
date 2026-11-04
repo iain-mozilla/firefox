@@ -43,6 +43,8 @@
 #if defined(XP_MACOSX)
 #  include <mach/mach.h>
 #  include <servers/bootstrap.h>
+#  include <sys/socket.h>
+#  include <sys/un.h>
 #  include "nsVersionComparator.h"
 #  include "chrome/common/mach_ipc_mac.h"
 #  include "gfxPlatformMac.h"
@@ -77,6 +79,12 @@
 #if defined(XP_WIN)
 #  include "mozilla/WindowsConsole.h"
 #  include "mozilla/WindowsDllBlocklist.h"
+#endif
+
+#ifdef XP_MACOSX
+// #  include "../../browser/components/taskbartabs/mac/remote/child/PWARuntime.h"
+#  include "mozilla/pwa/PWAChild.h"
+#  include "mozilla/pwa/PWAProcessChild.h"
 #endif
 
 #include "GMPProcessChild.h"
@@ -242,6 +250,12 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
 
   NS_SetCurrentThreadName("MainThread");
 
+  printf("Type before args: %s\n", XRE_GetProcessTypeString());
+
+  for (int i = 0; i < aArgc; i++) {
+    printf("%s ", aArgv[i]);
+  }
+  printf("\n");
 #ifdef MOZ_ASAN_REPORTER
   // In ASan reporter builds, we need to set ASan's log_path as early as
   // possible, so it dumps its errors into files there instead of using
@@ -326,6 +340,8 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
   // Acquire the mach bootstrap port name from our command line, and send our
   // task_t to the parent process.
   const char* const mach_port_name = aArgv[--aArgc];
+
+  printf("mach bootstrap port name: %s\n", mach_port_name);
 
   const int kTimeoutMs = 1000;
 
@@ -438,11 +454,13 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
     return NS_ERROR_FAILURE;
   }
 
+  printf("GEtting client channel\n");
   Maybe<IPC::Channel::ChannelHandle> clientChannel =
       geckoargs::sIPCHandle.Get(aArgc, aArgv);
 #ifdef XP_DARWIN
   MOZ_ASSERT_IF(clientChannel, !geckoargs::sIPCPort.IsPresent(aArgc, aArgv));
   if (!clientChannel) {
+    printf("No client channel, getting IPCPort\n");
     clientChannel = geckoargs::sIPCPort.Get(aArgc, aArgv);
   }
 #endif
@@ -592,6 +610,218 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
 
   return XRE_DeinitCommandLine();
 }
+
+
+#ifdef XP_MACOSX
+nsresult XRE_InitPWAProcess(const char *uuid, int aArgc, char * aArgv[]) {
+  printf("*** XRE_InitPWAProcess\n");
+
+  // Set up the main thread.
+  NS_LogInit();
+  NS_SetCurrentThreadName("MainThread");
+  SetGeckoProcessType("pwa");
+
+  // Set up logger or we crash on shutdown.
+  mozilla::LogModule::Init(aArgc, aArgv);
+
+  AUTO_BASE_PROFILER_LABEL("XRE_InitPWAProcess (around Gecko Profiler)",
+                           OTHER);
+  AUTO_PROFILER_INIT;
+  AUTO_PROFILER_LABEL("XRE_InitPWAProcess", OTHER);
+
+  // Needed for async IPC to work.
+  AbstractThread::InitTLS();
+
+  base::AtExitManager exitManager;
+
+  printf("*** Init commandline\n");
+  nsresult rv = XRE_InitCommandLine(aArgc, aArgv);
+  if (NS_FAILED(rv)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  printf("**** Open socket\n");
+  int parentConnection = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (parentConnection == -1) {
+    perror("Creating socket");
+    return NS_ERROR_FAILURE;
+  }
+
+  sockaddr_un addr;
+  memset(&addr, 0, sizeof(struct sockaddr_un));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, "/Users/iholmes/Library/Caches/Firefox/pwa.sock",
+          sizeof(addr.sun_path) - 1);
+
+  if (connect(parentConnection, (const struct sockaddr *)&addr, sizeof(sockaddr_un)) == -1) {
+    perror("Connecting");
+    return NS_ERROR_FAILURE;
+  }
+
+  // Need to send uuid and child (this process) pid to begin the connection
+  uint32_t len = strlen(uuid) + 1;
+  printf("Writing %u for uuid len: %s\n", len, uuid);
+  if (write(parentConnection, &len, sizeof(len)) == -1) {
+    perror("Sending uuid length");
+    return NS_ERROR_FAILURE;
+  }
+
+  printf("Writing uuid: %s\n", uuid);
+  if (write(parentConnection, uuid, len) == -1) {
+    perror("Sending uuid");
+    return NS_ERROR_FAILURE;
+  }
+
+  base::ProcessId childPid = getpid();
+  if (write(parentConnection, &childPid, sizeof(childPid)) == -1) {
+    perror("Sending pid");
+    return NS_ERROR_FAILURE;
+  }
+
+  // All info writen to socket, now we need to read
+  // parent (remote) Pid (int)
+  // service name length, and name (uint32, char[length])
+  // channel id length and name (uint32, char[length])
+  // parent build id length and name (uint32, char[length])
+  base::ProcessId parentPID;
+  if (read(parentConnection, &parentPID, sizeof(parentPID)) == -1) {
+    perror("Reading pid");
+    return NS_ERROR_FAILURE;
+  }
+
+  printf("Read pid: %d\n", parentPID);
+
+  uint32_t serviceNameLength;
+  if (read(parentConnection, &serviceNameLength, sizeof(serviceNameLength)) == -1) {
+    perror("Reading service name length");
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCString serviceName;
+  serviceName.SetLength(serviceNameLength);
+
+  if (read(parentConnection, serviceName.BeginWriting(), serviceNameLength) == -1) {
+    perror("Reading service name");
+    return NS_ERROR_FAILURE;
+  }
+
+  printf("Service name is: %s\n", serviceName.get());
+
+  int32_t childId;
+  if (read(parentConnection, &childId, sizeof(childId)) == -1) {
+    perror("Reading child id");
+    return NS_ERROR_FAILURE;
+  }
+  mozilla::startup::sGeckoChildID = childId;
+
+  IPC::Channel::ChannelHandle clientChannel;
+
+  clientChannel.emplace<mozilla::UniqueFileHandle>(parentConnection);
+
+  uint32_t idLen;
+  if (read(parentConnection, &idLen, sizeof(uint32_t)) == -1) {
+    perror("Reading id length");
+    return NS_ERROR_FAILURE;
+  }
+
+  printf("Id length - %d\n", idLen);
+
+  nsCString initialChannelId;
+  initialChannelId.SetLength(idLen);
+
+  if (read(parentConnection, initialChannelId.BeginWriting(), idLen) == -1) {
+    perror("Reading channel id");
+    return NS_ERROR_FAILURE;
+  }
+
+  printf("Channel id: %s\n", initialChannelId.get());
+
+  uint32_t buildIdLen;
+  if (read(parentConnection, &buildIdLen, sizeof(uint32_t)) == -1) {
+    perror("Reading build id length");
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCString parentBuildId;
+  parentBuildId.SetLength(buildIdLen);
+
+  if (read(parentConnection, parentBuildId.BeginWriting(), buildIdLen) == -1) {
+    perror("Reading build id");
+    return NS_ERROR_FAILURE;
+  }
+
+  std::vector<nsCString> sharedMemoryHandles;
+  uint32_t handleCount;
+  if (read(parentConnection, &handleCount, sizeof(uint32_t)) == -1) {
+    perror("Reading handle count");
+    return NS_ERROR_FAILURE;
+  }
+
+  for (uint32_t id = 0; id < handleCount; id++) {
+    uint32_t handleLength;
+    if (read(parentConnection, &handleLength, sizeof(uint32_t)) == -1) {
+      perror("Reading handle length");
+      return NS_ERROR_FAILURE;
+    }
+
+    nsCString handle;
+    handle.SetLength(handleLength);
+
+    if (read(parentConnection, handle.BeginWriting(), handleLength) == -1) {
+      perror("Reading handle");
+      return NS_ERROR_FAILURE;
+    }
+
+    sharedMemoryHandles.push_back(std::move(handle));
+  }
+
+  printf("*** Got %zu handles", sharedMemoryHandles.size());
+
+  // All data has been read, now we check in and send the task_t
+  const int kTimeoutMs = 1000;
+  std::vector<mozilla::UniqueMachSendRight> sendRights;
+  std::vector<mozilla::UniqueMachReceiveRight> receiveRights;
+  printf("Checking in\n");
+  if (NS_WARN_IF(!MachChildProcessCheckIn(serviceName.get(), kTimeoutMs,
+                                          sendRights, receiveRights))) {
+    printf("Failed to check in\n");
+    return NS_ERROR_FAILURE;
+  }
+
+  geckoargs::SetPassedMachSendRights(std::move(sendRights));
+  geckoargs::SetPassedMachReceiveRights(std::move(receiveRights));
+
+  nsID messageChannelId{};
+  if (NS_WARN_IF(!messageChannelId.Parse(initialChannelId))) {
+    printf("Bad channel id\n");
+    return NS_ERROR_FAILURE;
+  }
+
+  printf("*** task_t: %d\n", mach_task_self());
+
+  printf("Type: %s\n", XRE_GetProcessTypeString());
+  {
+    printf("*** Starting loop\n");
+    MessageLoop uiMessageLoop(MessageLoop::TYPE_UI);
+
+    UniquePtr<mozilla::pwa::PWAProcessChild> process;
+    process = std::make_unique<mozilla::pwa::PWAProcessChild>(std::move(clientChannel),
+                                                parentPID, messageChannelId);
+
+    fprintf(stderr, "*** Created process\n");
+    if (!process->Init(parentBuildId.get(), std::move(sharedMemoryHandles))) {
+      return NS_ERROR_FAILURE;
+    }
+
+    uiMessageLoop.MessageLoop::Run();
+
+    process->CleanUp();
+    mozilla::Omnijar::CleanUp();
+  }
+
+  return XRE_DeinitCommandLine();
+}
+#endif
 
 nsISerialEventTarget* XRE_GetAsyncIOEventTarget() {
   return IOThread::Get()->GetEventTarget();

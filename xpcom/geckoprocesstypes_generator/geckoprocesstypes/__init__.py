@@ -189,4 +189,15 @@ process_types = [
         "UTILITY",
         True,
     ),
+    GeckoProcessType(
+        12,
+        "PWA",
+        "pwa",
+        "PWA",
+        "Self",
+        "PWA",
+        "Pwa",
+        "PWA",
+        True,
+    ),
 ]

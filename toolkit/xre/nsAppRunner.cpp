@@ -109,6 +109,7 @@
 #include "gfxPlatform.h"
 #include "PDMFactory.h"
 #ifdef XP_MACOSX
+#  include "mozilla/pwa/PWAManager.h"
 #  include "gfxPlatformMac.h"
 #endif
 
@@ -1232,7 +1233,7 @@ nsXULAppInfo::GetWidgetToolkit(nsACString& aResult) {
 #undef GECKO_PROCESS_TYPE
 
 // .. and ensure that that is all of them:
-static_assert(GeckoProcessType_Utility + 1 == GeckoProcessType_End,
+static_assert(GeckoProcessType_PWA + 1 == GeckoProcessType_End,
               "Did not find the final GeckoProcessType");
 
 NS_IMETHODIMP
@@ -6515,6 +6516,10 @@ nsresult XREMain::XRE_mainRun() {
 #endif
 
   {
+#ifdef XP_MACOSX
+    NS_InitPWAManager();
+#endif
+
     rv = appStartup->Run();
     if (NS_FAILED(rv)) {
       NS_ERROR("failed to run appstartup");
